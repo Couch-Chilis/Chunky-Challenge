@@ -5,7 +5,7 @@ use crate::{
     constants::*,
     fonts::Fonts,
     game_object::{spawn_object_of_type, GameObjectAssets, ObjectType, Position},
-    level::Dimensions,
+    level::{Dimensions, InitialPositionAndMetadata},
     timers::{MovementTimer, TemporaryTimer, TransporterTimer},
     Background, GameEvent, SaveLevelEvent,
 };
@@ -97,11 +97,12 @@ pub fn spawn_selected_object(
     mut commands: Commands,
     background_query: Query<(Entity, &Transform), With<Background>>,
     objects: Query<(Entity, &Position, &ObjectType)>,
-    selected_object_type: Res<SelectedObjectType>,
-    buttons: Res<ButtonInput<MouseButton>>,
     window_query: Query<&Window, With<PrimaryWindow>>,
-    dimensions: Res<Dimensions>,
     assets: Res<GameObjectAssets>,
+    buttons: Res<ButtonInput<MouseButton>>,
+    dimensions: Res<Dimensions>,
+    fonts: Res<Fonts>,
+    selected_object_type: Res<SelectedObjectType>,
 ) {
     if !buttons.pressed(MouseButton::Left) {
         return;
@@ -164,7 +165,17 @@ pub fn spawn_selected_object(
         let mut background = commands.entity(background);
 
         background.with_children(|cb| {
-            spawn_object_of_type(cb, &assets, object_type, position, direction);
+            spawn_object_of_type(
+                cb,
+                &assets,
+                &fonts,
+                object_type,
+                InitialPositionAndMetadata {
+                    position,
+                    direction: Some(direction),
+                    level: Some(1),
+                },
+            );
         });
     }
 }

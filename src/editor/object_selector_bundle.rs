@@ -49,6 +49,7 @@ pub enum EditorObjectType {
     Creature1Right,
     Creature1Down,
     Creature1Left,
+    Entrance,
     Exit,
     Gate,
     Mine,
@@ -79,6 +80,7 @@ impl EditorObjectType {
             | Self::Creature1Right
             | Self::Creature1Down
             | Self::Creature1Left => Some(ObjectType::Creature1),
+            Self::Entrance => Some(ObjectType::Entrance),
             Self::Exit => Some(ObjectType::Exit),
             Self::Gate => Some(ObjectType::Gate),
             Self::Mine => Some(ObjectType::Mine),
@@ -128,6 +130,7 @@ impl EditorObjectType {
             Self::Creature1Right => assets.creature1.0.clone(),
             Self::Creature1Down => assets.creature1.0.clone(),
             Self::Creature1Left => assets.creature1.0.clone(),
+            Self::Entrance => assets.entrance.clone(),
             Self::Exit => assets.exit.clone(),
             Self::Gate => assets.gate.0.clone(),
             Self::Mine => assets.mine.clone(),
@@ -237,7 +240,8 @@ impl TryFrom<i16> for EditorObjectType {
             21 => Self::Button,
             22 => Self::PurpleBlock,
             23 => Self::YellowBlock,
-            24 => Self::BlackFill,
+            24 => Self::Entrance,
+            25 => Self::BlackFill,
             _ => return Err(()),
         };
         Ok(object_type)

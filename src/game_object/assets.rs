@@ -21,6 +21,7 @@ pub struct GameObjectAssets {
     pub bouncing_ball_editor: (Handle<Image>, Handle<TextureAtlasLayout>),
     pub button: Handle<Image>,
     pub creature1: (Handle<Image>, Handle<TextureAtlasLayout>),
+    pub entrance: Handle<Image>,
     pub eraser: Handle<Image>,
     pub explosion: Handle<Image>,
     pub exit: Handle<Image>,
@@ -78,6 +79,9 @@ impl GameObjectAssets {
                 ))),
                 one_by_four_atlas.clone(),
             ),
+            entrance: images.add(load_asset(include_bytes!(
+                "../../assets/sprites/entrance.png"
+            ))),
             eraser: images.add(load_asset(include_bytes!(
                 "../../assets/sprites/eraser.png"
             ))),

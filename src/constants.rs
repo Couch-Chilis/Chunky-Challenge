@@ -13,3 +13,4 @@ pub const LIGHT_GRAY: Color = Color::srgb(0.29411766, 0.33333334, 0.3882353);
 pub const NORMAL_GRAY: Color = Color::srgb(0.12156863, 0.16078432, 0.21568628);
 pub const RED: Color = Color::srgb(0.776, 0., 0.);
 pub const WHITE: Color = Color::srgb(1., 1., 1.);
+pub const ENTRANCE_TEXT: Color = Color::srgb(0.737, 0.38, 0.125);

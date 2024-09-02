@@ -122,6 +122,10 @@ pub struct BlocksPushes;
 #[derive(Component)]
 pub struct Deadly;
 
+/// An entrance to another level.
+#[derive(Component)]
+pub struct Entrance(pub u16);
+
 /// An exit completes the level when stepped on.
 #[derive(Component)]
 pub struct Exit;

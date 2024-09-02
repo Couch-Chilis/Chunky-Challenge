@@ -24,11 +24,11 @@ use constants::*;
 use editor::{spawn_selected_object, Editor, EditorPlugin, ToggleEditor};
 use fonts::Fonts;
 use game_object::{
-    behaviors::*, spawn_object_of_type, Direction, GameObjectAssets, ObjectType, Player, Position,
-    Weight, PLAYER_ASSET,
+    behaviors::*, spawn_object_of_type, Direction, Entrance, GameObjectAssets, ObjectType, Player,
+    Position, Weight, PLAYER_ASSET,
 };
 use gameover::{check_for_game_over, setup_gameover};
-use level::{Dimensions, InitialPositionAndDirection, Level, LEVELS};
+use level::{Dimensions, InitialPositionAndMetadata, Level, LEVELS};
 use menu::{MenuPlugin, MenuState};
 use timers::{AnimationTimer, MovementTimer, TemporaryTimer, TransporterTimer};
 use utils::get_level_filename;
@@ -114,7 +114,7 @@ fn main() {
         .add_event::<GameEvent>()
         .add_event::<SaveLevelEvent>()
         .add_systems(Startup, (set_window_icon, setup))
-        .add_systems(Update, (on_keyboard_input, on_resize_system, save_level))
+        .add_systems(Update, (on_keyboard_input, on_resize, save_level))
         .add_systems(
             Update,
             (
@@ -319,12 +319,13 @@ fn on_game_event(
     }
 }
 
-fn on_resize_system(mut commands: Commands, mut resize_reader: EventReader<WindowResized>) {
+fn on_resize(mut commands: Commands, mut resize_reader: EventReader<WindowResized>) {
     if resize_reader.read().last().is_some() {
         commands.trigger(UpdateBackgroundTransform);
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn load_level(
     mut commands: Commands,
     mut background_query: Query<Entity, With<Background>>,
@@ -333,6 +334,7 @@ fn load_level(
     mut pressed_triggers: ResMut<PressedTriggers>,
     mut zoom: ResMut<Zoom>,
     assets: Res<GameObjectAssets>,
+    fonts: Res<Fonts>,
 ) {
     if !levels.is_changed() {
         return;
@@ -355,7 +357,7 @@ fn load_level(
     let mut background = commands.entity(background_entity);
     background.despawn_descendants();
     background.with_children(|cb| {
-        spawn_level_objects(cb, level.objects, &assets);
+        spawn_level_objects(cb, level.objects, &assets, &fonts);
     });
 
     pressed_triggers.num_pressed_triggers = 0;
@@ -373,23 +375,29 @@ fn save_level(
     mut events: EventReader<SaveLevelEvent>,
     mut levels: ResMut<Levels>,
     dimensions: Res<Dimensions>,
-    objects_query: Query<(&ObjectType, &Position, Option<&Direction>)>,
+    objects_query: Query<(
+        &ObjectType,
+        &Position,
+        Option<&Direction>,
+        Option<&Entrance>,
+    )>,
 ) {
     let Some(_event) = events.read().last() else {
         return;
     };
 
     let mut objects = BTreeMap::new();
-    for (object_type, position, direction) in &objects_query {
+    for (object_type, position, direction, entrance) in &objects_query {
         if position.x > 0
             && position.x <= dimensions.width
             && position.y > 0
             && position.y <= dimensions.height
         {
             let positions = objects.entry(*object_type).or_insert(Vec::new());
-            positions.push(InitialPositionAndDirection {
+            positions.push(InitialPositionAndMetadata {
                 position: *position,
                 direction: direction.copied(),
+                level: entrance.map(|entrance| entrance.0),
             });
         }
     }
@@ -419,22 +427,13 @@ fn save_level(
 
 fn spawn_level_objects(
     commands: &mut ChildBuilder,
-    objects: BTreeMap<ObjectType, Vec<InitialPositionAndDirection>>,
+    objects: BTreeMap<ObjectType, Vec<InitialPositionAndMetadata>>,
     assets: &GameObjectAssets,
+    fonts: &Fonts,
 ) {
     for (object_type, initial_positions) in objects {
-        for InitialPositionAndDirection {
-            position,
-            direction,
-        } in initial_positions
-        {
-            spawn_object_of_type(
-                commands,
-                assets,
-                object_type,
-                position,
-                direction.unwrap_or_default(),
-            );
+        for initial_position in initial_positions {
+            spawn_object_of_type(commands, assets, fonts, object_type, initial_position);
         }
     }
 }

@@ -2,6 +2,9 @@ use bevy::prelude::*;
 
 use crate::{constants::*, fonts::Fonts, setup, GameEvent};
 
+pub const MENU_WIDTH: f32 = 500.;
+pub const MENU_HEIGHT: f32 = 400.;
+
 #[derive(Component)]
 pub struct Menu;
 
@@ -35,7 +38,10 @@ impl Plugin for MenuPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Startup, setup_menu.after(setup))
             .init_resource::<MenuState>()
-            .add_systems(Update, (on_menu_keyboard_input, on_menu_interaction_input))
+            .add_systems(
+                Update,
+                (on_menu_keyboard_input, on_menu_interaction_input, on_resize),
+            )
             .add_systems(
                 Update,
                 render_menu
@@ -66,7 +72,11 @@ impl MenuButton {
     }
 }
 
-fn setup_menu(mut commands: Commands, fonts: Res<Fonts>) {
+fn setup_menu(mut commands: Commands, window_query: Query<&Window>, fonts: Res<Fonts>) {
+    let window = window_query
+        .get_single()
+        .expect("there should be only one window");
+
     commands
         .spawn((
             Menu,
@@ -76,10 +86,11 @@ fn setup_menu(mut commands: Commands, fonts: Res<Fonts>) {
                     flex_direction: FlexDirection::Column,
                     align_items: AlignItems::Center,
                     justify_content: JustifyContent::Center,
-                    width: Val::Px(500.),
-                    height: Val::Px(400.),
+                    width: Val::Px(MENU_WIDTH),
+                    height: Val::Px(MENU_HEIGHT),
                     border: UiRect::all(Val::Px(2.)),
-                    margin: UiRect::all(Val::Auto).with_top(Val::Px(236.)),
+                    margin: UiRect::all(Val::Auto)
+                        .with_top(Val::Px(calculate_top_margin(window.size()))),
                     padding: UiRect::all(Val::Auto),
                     row_gap: Val::Px(40.),
                     position_type: PositionType::Absolute,
@@ -222,6 +233,17 @@ fn on_menu_interaction_input(
     }
 }
 
+fn on_resize(
+    mut menu_query: Query<&mut Style, With<Menu>>,
+    window_query: Query<&Window, Changed<Window>>,
+) {
+    for window in &window_query {
+        for mut style in &mut menu_query {
+            style.margin.top = Val::Px(calculate_top_margin(window.size()));
+        }
+    }
+}
+
 fn handle_button_press(mut events: EventWriter<GameEvent>, mut menu_state: ResMut<MenuState>) {
     match menu_state.selected_button {
         MenuButton::Start => {
@@ -239,4 +261,9 @@ fn handle_button_press(mut events: EventWriter<GameEvent>, mut menu_state: ResMu
         }
         MenuButton::__Last => unreachable!(),
     }
+}
+
+fn calculate_top_margin(window_size: Vec2) -> f32 {
+    // Add a small extra margin at the end so the written logo is revealed well.
+    0.5 * (window_size.y - MENU_HEIGHT) + 50.
 }

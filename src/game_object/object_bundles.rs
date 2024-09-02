@@ -3,8 +3,8 @@ use bevy::prelude::*;
 use super::{
     assets::GameObjectAssets,
     components::{Exit, Liquid, Massive, Player, Position, Pushable},
-    Animatable, BlocksMovement, BlocksPushes, Deadly, Direction, Explosive, Floatable, Movable,
-    ObjectType, Openable, TransformOnPush, Transporter, Trigger, Volatile, Weight,
+    Animatable, BlocksMovement, BlocksPushes, Deadly, Direction, Entrance, Explosive, Floatable,
+    Movable, ObjectType, Openable, TransformOnPush, Transporter, Trigger, Volatile, Weight,
 };
 
 #[derive(Bundle)]
@@ -136,6 +136,29 @@ impl Creature1Bundle {
             sprite: SpriteBundle {
                 texture: assets.creature1.0.clone(),
                 transform: Transform::from_translation(Vec3::new(0., 0., 4.)),
+                ..Default::default()
+            },
+        }
+    }
+}
+
+#[derive(Bundle)]
+pub struct EntranceBundle {
+    object_type: ObjectType,
+    entrance: Entrance,
+    position: Position,
+    sprite: SpriteBundle,
+}
+
+impl EntranceBundle {
+    pub fn spawn(assets: &GameObjectAssets, position: Position, level: u16) -> Self {
+        Self {
+            object_type: ObjectType::Entrance,
+            entrance: Entrance(level),
+            position,
+            sprite: SpriteBundle {
+                texture: assets.entrance.clone(),
+                transform: Transform::from_translation(Vec3::new(0., 0., 1.)),
                 ..Default::default()
             },
         }

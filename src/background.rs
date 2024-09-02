@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 use crate::{
-    constants::*, editor::Editor, level::Dimensions, load_level, on_resize_system,
+    constants::*, editor::Editor, level::Dimensions, load_level, on_resize,
     utils::load_repeating_asset, Player, Position, Zoom,
 };
 
@@ -20,10 +20,7 @@ impl Plugin for BackgroundPlugin {
         app.add_systems(Startup, setup_background)
             .init_resource::<BackgroundAsset>()
             .add_event::<UpdateBackgroundTransform>()
-            .add_systems(
-                Update,
-                resize_background.after(load_level).after(on_resize_system),
-            )
+            .add_systems(Update, resize_background.after(load_level).after(on_resize))
             .observe(update_background_transform);
     }
 }

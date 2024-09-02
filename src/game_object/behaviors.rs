@@ -4,8 +4,9 @@ use bevy::prelude::*;
 use rand::{thread_rng, Rng};
 
 use crate::{
+    fonts::Fonts,
     game_object::Pushable,
-    level::Dimensions,
+    level::{Dimensions, InitialPositionAndMetadata},
     timers::{AnimationTimer, MovementTimer, TemporaryTimer, TransporterTimer},
     Background, GameEvent, PressedTriggers,
 };
@@ -162,6 +163,7 @@ pub fn check_for_transform_on_push(
         With<Pushable>,
     >,
     assets: Res<GameObjectAssets>,
+    fonts: Res<Fonts>,
 ) {
     for (entity, direction, position, TransformOnPush(object_type)) in &transform_query {
         if position.is_changed() && !position.is_added() {
@@ -176,9 +178,13 @@ pub fn check_for_transform_on_push(
                 spawn_object_of_type(
                     cb,
                     &assets,
+                    &fonts,
                     *object_type,
-                    *position,
-                    direction.copied().unwrap_or_default(),
+                    InitialPositionAndMetadata {
+                        position: *position,
+                        direction: direction.copied(),
+                        level: None,
+                    },
                 );
             });
         }

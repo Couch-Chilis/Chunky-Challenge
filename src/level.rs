@@ -1,6 +1,7 @@
 use std::{
     cmp::Ordering,
     collections::{btree_map::Entry, BTreeMap},
+    fmt::Write,
     str::FromStr,
 };
 
@@ -45,21 +46,23 @@ impl Default for Dimensions {
     }
 }
 
-pub struct InitialPositionAndDirection {
+pub struct InitialPositionAndMetadata {
     pub position: Position,
     pub direction: Option<Direction>,
+    pub level: Option<u16>,
 }
 
 pub struct Level {
     pub dimensions: Dimensions,
-    pub objects: BTreeMap<ObjectType, Vec<InitialPositionAndDirection>>,
+    pub objects: BTreeMap<ObjectType, Vec<InitialPositionAndMetadata>>,
 }
 
 impl Level {
     pub fn load(content: &str) -> Self {
         let mut dimensions = Dimensions::default();
         let mut direction = None;
-        let mut objects: BTreeMap<ObjectType, Vec<InitialPositionAndDirection>> = BTreeMap::new();
+        let mut level = None;
+        let mut objects: BTreeMap<ObjectType, Vec<InitialPositionAndMetadata>> = BTreeMap::new();
 
         let mut section_name = None;
         for line in content.lines() {
@@ -98,13 +101,14 @@ impl Level {
             };
 
             if key == "Position" {
-                let positions: Vec<InitialPositionAndDirection> = value
+                let positions: Vec<InitialPositionAndMetadata> = value
                     .split(';')
                     .filter_map(|location| match location.split_once(',') {
                         Some((x, y)) => match (x.parse(), y.parse()) {
-                            (Ok(x), Ok(y)) => Some(InitialPositionAndDirection {
+                            (Ok(x), Ok(y)) => Some(InitialPositionAndMetadata {
                                 position: Position { x, y },
                                 direction,
+                                level,
                             }),
                             _ => {
                                 println!("Invalid location ({x},{y})");
@@ -131,6 +135,13 @@ impl Level {
                         println!("Unknown direction: {value}");
                     }
                 }
+            } else if key == "Level" {
+                match value.parse() {
+                    Ok(value) => level = Some(value),
+                    Err(_) => {
+                        println!("Cannot parse level number: {value}");
+                    }
+                }
             } else {
                 println!("Unknown key: {key}");
             }
@@ -145,10 +156,10 @@ impl Level {
     pub fn save(self) -> String {
         let Dimensions { width, height } = self.dimensions;
 
-        let mut content = format!("[General]\nWidth={width}\nHeight={height}\n");
+        let mut content = format!("[General]\nWidth={width}\nHeight={height}");
 
         for (object_type, mut positions) in self.objects {
-            content.push_str(&format!("\n[{object_type}]\n"));
+            writeln!(content, "\n\n[{object_type}]").expect("writing failed");
 
             positions.sort_unstable_by(|a, b| match a.direction.cmp(&b.direction) {
                 Ordering::Equal => a.position.cmp(&b.position),
@@ -156,22 +167,41 @@ impl Level {
             });
 
             let mut current_direction = Direction::default();
-            for InitialPositionAndDirection {
+            let mut current_level = 0;
+            let mut last_x = None;
+            for InitialPositionAndMetadata {
                 position,
                 direction,
+                level,
             } in positions
             {
                 if let Some(direction) = direction {
                     if direction != current_direction {
-                        content.push_str(&format!("Direction={direction}\n"));
+                        writeln!(content, "Direction={direction}").expect("writing failed");
                         current_direction = direction;
                     }
                 }
 
-                content.push_str(&format!("Position={position}\n"));
+                if let Some(level) = level {
+                    if level != current_level {
+                        writeln!(content, "Level={level}").expect("writing failed");
+                        current_level = level;
+                    }
+                }
+
+                if content.ends_with('\n') {
+                    write!(content, "Position={position}").expect("writing failed");
+                } else if last_x != Some(position.x) {
+                    write!(content, "\nPosition={position}").expect("writing failed");
+                } else {
+                    write!(content, ";{position}").expect("writing failed");
+                }
+
+                last_x = Some(position.x);
             }
         }
 
+        content.push('\n');
         content
     }
 }

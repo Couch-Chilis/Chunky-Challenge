@@ -3,16 +3,17 @@ use std::str::FromStr;
 
 use bevy::{ecs::system::EntityCommands, prelude::*};
 
-use crate::errors::UnknownObjectType;
+use crate::{
+    errors::UnknownObjectType, fonts::Fonts, level::InitialPositionAndMetadata, ENTRANCE_TEXT,
+};
 
 use super::{
     assets::GameObjectAssets,
-    components::Position,
     object_bundles::{
         BlueBlockBundle, BouncingBallBundle, Creature1Bundle, ExitBundle, PlayerBundle, RaftBundle,
         RedBlockBundle, WaterBundle,
     },
-    BlackFillBundle, ButtonBundle, Direction, GateBundle, MineBundle, PurpleBlockBundle,
+    BlackFillBundle, ButtonBundle, EntranceBundle, GateBundle, MineBundle, PurpleBlockBundle,
     TransporterBundle, YellowBlockBundle,
 };
 
@@ -23,6 +24,7 @@ pub enum ObjectType {
     BouncingBall,
     Button,
     Creature1,
+    Entrance,
     Exit,
     Gate,
     Mine,
@@ -43,6 +45,7 @@ impl Display for ObjectType {
             Self::BouncingBall => "BouncingBall",
             Self::Button => "Button",
             Self::Creature1 => "Creature1",
+            Self::Entrance => "Entrance",
             Self::Exit => "Exit",
             Self::Gate => "Gate",
             Self::Mine => "Mine",
@@ -67,6 +70,7 @@ impl FromStr for ObjectType {
             "BouncingBall" => Ok(Self::BouncingBall),
             "Button" => Ok(Self::Button),
             "Creature1" => Ok(Self::Creature1),
+            "Entrance" => Ok(Self::Entrance),
             "Exit" => Ok(Self::Exit),
             "Gate" => Ok(Self::Gate),
             "Mine" => Ok(Self::Mine),
@@ -85,18 +89,47 @@ impl FromStr for ObjectType {
 pub fn spawn_object_of_type<'a>(
     cb: &'a mut ChildBuilder,
     assets: &GameObjectAssets,
+    fonts: &Fonts,
     object_type: ObjectType,
-    position: Position,
-    direction: Direction,
+    initial_position: InitialPositionAndMetadata,
 ) -> EntityCommands<'a> {
+    let position = initial_position.position;
+
     match object_type {
         ObjectType::BlackFill => cb.spawn(BlackFillBundle::spawn(assets, position)),
         ObjectType::BlueBlock => cb.spawn(BlueBlockBundle::spawn(assets, position)),
-        ObjectType::BouncingBall => {
-            cb.spawn(BouncingBallBundle::spawn(assets, position, direction))
-        }
+        ObjectType::BouncingBall => cb.spawn(BouncingBallBundle::spawn(
+            assets,
+            position,
+            initial_position.direction.unwrap_or_default(),
+        )),
         ObjectType::Button => cb.spawn(ButtonBundle::spawn(assets, position)),
-        ObjectType::Creature1 => cb.spawn(Creature1Bundle::spawn(assets, position, direction)),
+        ObjectType::Creature1 => cb.spawn(Creature1Bundle::spawn(
+            assets,
+            position,
+            initial_position.direction.unwrap_or_default(),
+        )),
+        ObjectType::Entrance => {
+            let mut cb = cb.spawn(EntranceBundle::spawn(
+                assets,
+                position,
+                initial_position.level.unwrap_or_default(),
+            ));
+            cb.with_children(|cb| {
+                cb.spawn(Text2dBundle {
+                    text: Text::from_section(
+                        initial_position.level.unwrap_or_default().to_string(),
+                        TextStyle {
+                            font: fonts.poppins_light.clone(),
+                            font_size: 24.,
+                            color: ENTRANCE_TEXT,
+                        },
+                    ),
+                    ..Default::default()
+                });
+            });
+            cb
+        }
         ObjectType::Exit => cb.spawn(ExitBundle::spawn(assets, position)),
         ObjectType::Gate => cb.spawn(GateBundle::spawn(assets, position)),
         ObjectType::Mine => cb.spawn(MineBundle::spawn(assets, position)),
@@ -104,7 +137,11 @@ pub fn spawn_object_of_type<'a>(
         ObjectType::PurpleBlock => cb.spawn(PurpleBlockBundle::spawn(assets, position)),
         ObjectType::Raft => cb.spawn(RaftBundle::spawn(assets, position)),
         ObjectType::RedBlock => cb.spawn(RedBlockBundle::spawn(assets, position)),
-        ObjectType::Transporter => cb.spawn(TransporterBundle::spawn(assets, position, direction)),
+        ObjectType::Transporter => cb.spawn(TransporterBundle::spawn(
+            assets,
+            position,
+            initial_position.direction.unwrap_or_default(),
+        )),
         ObjectType::Water => cb.spawn(WaterBundle::spawn(assets, position)),
         ObjectType::YellowBlock => cb.spawn(YellowBlockBundle::spawn(assets, position)),
     }

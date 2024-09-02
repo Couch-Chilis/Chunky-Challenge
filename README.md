@@ -3,7 +3,7 @@
 > Clever 2D Puzzle Game with Chunky Graphics
 
 Chunky is not your average hero. They are square, quirkily drawn, and they have
-an unending thirst for solving puzzles.
+an unquenchable thirst for solving puzzles.
 
 - 100 clever puzzles? Check! (Well... 100 is our target for release, currently there are fewer!)
 - Chunky graphics? Check!
