@@ -7,7 +7,7 @@ use crate::{
     game_object::{spawn_object_of_type, GameObjectAssets, ObjectType, Position},
     level::{Dimensions, InitialPositionAndMetadata},
     timers::{MovementTimer, TemporaryTimer, TransporterTimer},
-    Background, GameEvent, SaveLevelEvent,
+    Background, GameEvent, SaveLevel,
 };
 
 use super::{
@@ -16,19 +16,19 @@ use super::{
 };
 
 pub fn on_editor_button_interaction(
+    mut commands: Commands,
     mut interaction_query: Query<
         (&Interaction, &Button, &mut BackgroundColor),
         Changed<Interaction>,
     >,
-    mut events: EventWriter<SaveLevelEvent>,
 ) {
     for (interaction, button, mut color) in &mut interaction_query {
         match *interaction {
             Interaction::Pressed => {
                 *color = WHITE.into();
-                events.send(match button {
-                    Button::Save => SaveLevelEvent::Save,
-                });
+                match button {
+                    Button::Save => commands.trigger(SaveLevel),
+                }
             }
             Interaction::Hovered => {
                 *color = LIGHT_GRAY.into();
@@ -41,22 +41,28 @@ pub fn on_editor_button_interaction(
 }
 
 pub fn on_editor_number_input_interaction(
+    mut events: EventWriter<GameEvent>,
     mut interaction_query: Query<
         (&Interaction, &Input, &NumberInput, &mut BackgroundColor),
         Changed<Interaction>,
     >,
-    mut events: EventWriter<GameEvent>,
+    keys: Res<ButtonInput<KeyCode>>,
 ) {
     for (interaction, input, number_input, mut color) in &mut interaction_query {
         match *interaction {
             Interaction::Pressed => {
                 *color = WHITE.into();
 
+                let abs_delta = if keys.any_pressed([KeyCode::ControlLeft, KeyCode::ControlRight]) {
+                    2
+                } else {
+                    1
+                };
                 let event = match (input, number_input) {
-                    (Input::Width, NumberInput::Increase) => GameEvent::ChangeWidth(1),
-                    (Input::Width, NumberInput::Decrease) => GameEvent::ChangeWidth(-1),
-                    (Input::Height, NumberInput::Increase) => GameEvent::ChangeHeight(1),
-                    (Input::Height, NumberInput::Decrease) => GameEvent::ChangeHeight(-1),
+                    (Input::Width, NumberInput::Increase) => GameEvent::ChangeWidth(abs_delta),
+                    (Input::Width, NumberInput::Decrease) => GameEvent::ChangeWidth(-abs_delta),
+                    (Input::Height, NumberInput::Increase) => GameEvent::ChangeHeight(abs_delta),
+                    (Input::Height, NumberInput::Decrease) => GameEvent::ChangeHeight(-abs_delta),
                     _ => continue,
                 };
                 events.send(event);
@@ -154,7 +160,7 @@ pub fn spawn_selected_object(
             return; // This object is already there.
         }
 
-        commands.entity(entity).despawn();
+        commands.entity(entity).despawn_recursive();
     }
 
     if x < 1 || x > dimensions.width || y < 1 || y > dimensions.height {

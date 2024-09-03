@@ -8,28 +8,6 @@ use super::{
 };
 
 #[derive(Bundle)]
-pub struct BlackFillBundle {
-    object_type: ObjectType,
-    position: Position,
-    sprite: SpriteBundle,
-}
-
-impl BlackFillBundle {
-    pub fn spawn(assets: &GameObjectAssets, position: Position) -> Self {
-        Self {
-            object_type: ObjectType::BlackFill,
-            position,
-            sprite: SpriteBundle {
-                texture: assets.black_fill.clone(),
-                transform: Transform::from_translation(Vec3::new(0., 0., 1.))
-                    .with_scale(Vec3::new(48.1, 48.1, 1.)),
-                ..Default::default()
-            },
-        }
-    }
-}
-
-#[derive(Bundle)]
 pub struct BlueBlockBundle {
     object_type: ObjectType,
     massive: Massive,

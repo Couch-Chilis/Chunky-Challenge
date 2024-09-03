@@ -34,6 +34,8 @@ use timers::{AnimationTimer, MovementTimer, TemporaryTimer, TransporterTimer};
 use utils::get_level_filename;
 use winit::window::Icon;
 
+pub const INITIAL_HUB_FOCUS: (i16, i16) = (33, 26);
+
 #[derive(Resource)]
 struct Levels {
     current_level: usize,
@@ -81,9 +83,13 @@ enum GameEvent {
 }
 
 #[derive(Event)]
-enum SaveLevelEvent {
-    Save,
+struct MoveAllObjects {
+    dx: i16,
+    dy: i16,
 }
+
+#[derive(Event)]
+struct SaveLevel;
 
 fn main() {
     App::new()
@@ -112,9 +118,10 @@ fn main() {
         .init_resource::<TransporterTimer>()
         .insert_resource(Zoom::hub_default())
         .add_event::<GameEvent>()
-        .add_event::<SaveLevelEvent>()
+        .add_event::<MoveAllObjects>()
+        .add_event::<SaveLevel>()
         .add_systems(Startup, (set_window_icon, setup))
-        .add_systems(Update, (on_keyboard_input, on_resize, save_level))
+        .add_systems(Update, (on_keyboard_input, on_resize))
         .add_systems(
             Update,
             (
@@ -138,7 +145,7 @@ fn main() {
                 .after(on_keyboard_input)
                 .after(move_objects),
         )
-        .add_systems(Update, load_level.after(on_game_event).after(save_level))
+        .add_systems(Update, load_level.after(on_game_event))
         .add_systems(
             Update,
             (position_entities, update_entity_directions)
@@ -148,6 +155,8 @@ fn main() {
                 .after(move_objects)
                 .after(spawn_selected_object),
         )
+        .observe(move_all_objects)
+        .observe(save_level)
         .run();
 }
 
@@ -273,11 +282,25 @@ fn on_game_event(
             GameEvent::ChangeHeight(delta) => {
                 if dimensions.height + delta > 0 {
                     dimensions.height += delta;
+
+                    if delta.abs() > 1 {
+                        commands.trigger(MoveAllObjects {
+                            dx: 0,
+                            dy: delta / 2,
+                        });
+                    }
                 }
             }
             GameEvent::ChangeWidth(delta) => {
                 if dimensions.width + delta > 0 {
                     dimensions.width += delta;
+
+                    if delta.abs() > 1 {
+                        commands.trigger(MoveAllObjects {
+                            dx: delta / 2,
+                            dy: 0,
+                        });
+                    }
                 }
             }
             GameEvent::ChangeZoom(factor) => {
@@ -371,8 +394,17 @@ fn load_level(
     };
 }
 
+fn move_all_objects(trigger: Trigger<MoveAllObjects>, mut query: Query<&mut Position>) {
+    let MoveAllObjects { dx, dy } = trigger.event();
+
+    for mut position in &mut query {
+        position.x += *dx;
+        position.y += *dy;
+    }
+}
+
 fn save_level(
-    mut events: EventReader<SaveLevelEvent>,
+    _trigger: Trigger<SaveLevel>,
     mut levels: ResMut<Levels>,
     dimensions: Res<Dimensions>,
     objects_query: Query<(
@@ -382,10 +414,6 @@ fn save_level(
         Option<&Entrance>,
     )>,
 ) {
-    let Some(_event) = events.read().last() else {
-        return;
-    };
-
     let mut objects = BTreeMap::new();
     for (object_type, position, direction, entrance) in &objects_query {
         if position.x > 0

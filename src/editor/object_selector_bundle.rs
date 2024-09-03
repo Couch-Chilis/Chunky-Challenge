@@ -38,7 +38,6 @@ impl DerefMut for SelectedObjectType {
 #[derive(Clone, Component, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub enum EditorObjectType {
     Eraser,
-    BlackFill,
     BlueBlock,
     BouncingBallUp,
     BouncingBallRight,
@@ -69,7 +68,6 @@ pub enum EditorObjectType {
 impl EditorObjectType {
     pub fn get_object_type_and_direction(self) -> Option<(ObjectType, Direction)> {
         let object_type = match self {
-            Self::BlackFill => Some(ObjectType::BlackFill),
             Self::BlueBlock => Some(ObjectType::BlueBlock),
             Self::BouncingBallUp
             | Self::BouncingBallRight
@@ -119,7 +117,6 @@ impl EditorObjectType {
     fn get_texture(self, assets: &GameObjectAssets) -> (Handle<Image>, Option<TextureAtlas>) {
         let image = match self {
             Self::Eraser => assets.eraser.clone(),
-            Self::BlackFill => assets.black_fill.clone(),
             Self::BlueBlock => assets.blue_block.clone(),
             Self::BouncingBallUp
             | Self::BouncingBallRight
@@ -241,7 +238,6 @@ impl TryFrom<i16> for EditorObjectType {
             22 => Self::PurpleBlock,
             23 => Self::YellowBlock,
             24 => Self::Entrance,
-            25 => Self::BlackFill,
             _ => return Err(()),
         };
         Ok(object_type)

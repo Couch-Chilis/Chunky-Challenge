@@ -13,13 +13,12 @@ use super::{
         BlueBlockBundle, BouncingBallBundle, Creature1Bundle, ExitBundle, PlayerBundle, RaftBundle,
         RedBlockBundle, WaterBundle,
     },
-    BlackFillBundle, ButtonBundle, EntranceBundle, GateBundle, MineBundle, PurpleBlockBundle,
-    TransporterBundle, YellowBlockBundle,
+    ButtonBundle, EntranceBundle, GateBundle, MineBundle, PurpleBlockBundle, TransporterBundle,
+    YellowBlockBundle,
 };
 
 #[derive(Clone, Component, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub enum ObjectType {
-    BlackFill,
     BlueBlock,
     BouncingBall,
     Button,
@@ -40,7 +39,6 @@ pub enum ObjectType {
 impl Display for ObjectType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(match self {
-            Self::BlackFill => "BlackFill",
             Self::BlueBlock => "BlueBlock",
             Self::BouncingBall => "BouncingBall",
             Self::Button => "Button",
@@ -65,7 +63,6 @@ impl FromStr for ObjectType {
 
     fn from_str(object_type: &str) -> Result<Self, Self::Err> {
         match object_type {
-            "BlackFill" => Ok(Self::BlackFill),
             "BlueBlock" => Ok(Self::BlueBlock),
             "BouncingBall" => Ok(Self::BouncingBall),
             "Button" => Ok(Self::Button),
@@ -96,7 +93,6 @@ pub fn spawn_object_of_type<'a>(
     let position = initial_position.position;
 
     match object_type {
-        ObjectType::BlackFill => cb.spawn(BlackFillBundle::spawn(assets, position)),
         ObjectType::BlueBlock => cb.spawn(BlueBlockBundle::spawn(assets, position)),
         ObjectType::BouncingBall => cb.spawn(BouncingBallBundle::spawn(
             assets,
@@ -125,6 +121,7 @@ pub fn spawn_object_of_type<'a>(
                             color: ENTRANCE_TEXT,
                         },
                     ),
+                    transform: Transform::from_translation(Vec3::new(0., 0., 1.)),
                     ..Default::default()
                 });
             });

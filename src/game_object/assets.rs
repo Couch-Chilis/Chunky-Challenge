@@ -1,13 +1,4 @@
-use bevy::{
-    prelude::*,
-    render::{
-        render_asset::RenderAssetUsages,
-        render_resource::{
-            Extent3d, TextureDescriptor, TextureDimension, TextureFormat, TextureUsages,
-        },
-        texture::{BevyDefault, ImageSampler},
-    },
-};
+use bevy::prelude::*;
 
 use crate::utils::load_asset;
 
@@ -15,7 +6,6 @@ pub const PLAYER_ASSET: &[u8] = include_bytes!("../../assets/sprites/player.png"
 
 #[derive(Clone, Default, Resource)]
 pub struct GameObjectAssets {
-    pub black_fill: Handle<Image>,
     pub blue_block: Handle<Image>,
     pub bouncing_ball: Handle<Image>,
     pub bouncing_ball_editor: (Handle<Image>, Handle<TextureAtlasLayout>),
@@ -57,7 +47,6 @@ impl GameObjectAssets {
         };
 
         Self {
-            black_fill: images.add(black_pixel()),
             blue_block: images.add(load_asset(include_bytes!(
                 "../../assets/sprites/blueblock.png"
             ))),
@@ -120,30 +109,5 @@ impl GameObjectAssets {
                 "../../assets/sprites/yellowblock.png"
             ))),
         }
-    }
-}
-
-fn black_pixel() -> Image {
-    let format = TextureFormat::bevy_default();
-    let data = vec![0, 0, 0, 255];
-    Image {
-        data,
-        texture_descriptor: TextureDescriptor {
-            size: Extent3d {
-                width: 1,
-                height: 1,
-                depth_or_array_layers: 1,
-            },
-            format,
-            dimension: TextureDimension::D2,
-            label: None,
-            mip_level_count: 1,
-            sample_count: 1,
-            usage: TextureUsages::TEXTURE_BINDING | TextureUsages::COPY_DST,
-            view_formats: &[],
-        },
-        sampler: ImageSampler::Default,
-        texture_view_descriptor: None,
-        asset_usage: RenderAssetUsages::default(),
     }
 }

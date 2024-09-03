@@ -73,7 +73,7 @@ impl Direction {
     }
 
     /// Returns a `(dx, dy)` tuple for the direction.
-    pub fn to_delta(self) -> (i16, i16) {
+    pub fn as_delta(self) -> (i16, i16) {
         match self {
             Self::Up => (0, -1),
             Self::Right => (1, 0),
@@ -93,6 +93,20 @@ impl FromStr for Direction {
             "Down" => Ok(Self::Down),
             "Left" => Ok(Self::Left),
             _ => Err(UnknownDirection),
+        }
+    }
+}
+
+impl TryFrom<(i16, i16)> for Direction {
+    type Error = ();
+
+    fn try_from((dx, dy): (i16, i16)) -> Result<Self, Self::Error> {
+        match (dx, dy) {
+            (0, -1) => Ok(Self::Up),
+            (1, 0) => Ok(Self::Right),
+            (0, 1) => Ok(Self::Down),
+            (-1, 0) => Ok(Self::Left),
+            _ => Err(()),
         }
     }
 }

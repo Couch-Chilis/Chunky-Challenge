@@ -1,8 +1,8 @@
 use bevy::prelude::*;
 
 use crate::{
-    constants::*, editor::Editor, level::Dimensions, load_level, on_resize,
-    utils::load_repeating_asset, Player, Position, Zoom,
+    constants::*, editor::Editor, level::Dimensions, load_level, menu::MenuState, on_resize,
+    utils::load_repeating_asset, Levels, Player, Position, Zoom, INITIAL_HUB_FOCUS,
 };
 
 const BACKGROUND_ASSET: &[u8] = include_bytes!("../assets/sprites/background.png");
@@ -69,6 +69,7 @@ fn resize_background(
     commands.trigger(UpdateBackgroundTransform);
 }
 
+#[allow(clippy::too_many_arguments)]
 fn update_background_transform(
     _trigger: Trigger<UpdateBackgroundTransform>,
     mut background_query: Query<&mut Transform, With<Background>>,
@@ -76,9 +77,15 @@ fn update_background_transform(
     player_query: Query<&Position, With<Player>>,
     window_query: Query<&Window>,
     dimensions: Res<Dimensions>,
+    levels: Res<Levels>,
+    menu_state: Res<MenuState>,
     zoom: Res<Zoom>,
 ) {
-    let Ok(player_position) = player_query.get_single() else {
+    let (focus_x, focus_y) = if menu_state.is_open && levels.current_level == 0 {
+        (INITIAL_HUB_FOCUS.0 as f32, INITIAL_HUB_FOCUS.1 as f32)
+    } else if let Ok(player_position) = player_query.get_single() {
+        (player_position.x as f32, player_position.y as f32)
+    } else {
         return;
     };
 
@@ -97,9 +104,7 @@ fn update_background_transform(
     let level_width = (dimensions.width * GRID_SIZE) as f32 * zoom.factor;
     let x = if level_width > window_size.x - editor_width {
         let max = 0.5 * (level_width - (window_size.x - editor_width));
-        (zoom.factor
-            * ((-player_position.x as f32 + 0.5 * dimensions.width as f32) + 0.5)
-            * GRID_SIZE as f32)
+        (zoom.factor * ((-focus_x + 0.5 * dimensions.width as f32) + 0.5) * GRID_SIZE as f32)
             .clamp(-max, max)
     } else {
         0.
@@ -107,9 +112,7 @@ fn update_background_transform(
     let level_height = (dimensions.height * GRID_SIZE) as f32 * zoom.factor;
     let y = if level_height > window_size.y {
         let max = 0.5 * (level_height - window_size.y);
-        (zoom.factor
-            * ((player_position.y as f32 - 0.5 * dimensions.height as f32) - 0.5)
-            * GRID_SIZE as f32)
+        (zoom.factor * ((focus_y - 0.5 * dimensions.height as f32) - 0.5) * GRID_SIZE as f32)
             .clamp(-max, max)
     } else {
         0.

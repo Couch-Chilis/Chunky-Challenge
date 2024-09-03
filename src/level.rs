@@ -177,6 +177,10 @@ impl Level {
             {
                 if let Some(direction) = direction {
                     if direction != current_direction {
+                        if !content.ends_with('\n') {
+                            content.push('\n');
+                        }
+
                         writeln!(content, "Direction={direction}").expect("writing failed");
                         current_direction = direction;
                     }
@@ -184,6 +188,10 @@ impl Level {
 
                 if let Some(level) = level {
                     if level != current_level {
+                        if !content.ends_with('\n') {
+                            content.push('\n');
+                        }
+
                         writeln!(content, "Level={level}").expect("writing failed");
                         current_level = level;
                     }
