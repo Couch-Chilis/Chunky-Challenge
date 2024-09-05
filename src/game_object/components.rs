@@ -228,6 +228,7 @@ pub struct Volatile;
 #[derive(Clone, Component, Copy, Default, Eq, Ord, PartialEq, PartialOrd)]
 pub enum Weight {
     #[default]
+    None,
     Light,
     Heavy,
 }

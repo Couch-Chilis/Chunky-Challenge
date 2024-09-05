@@ -216,7 +216,7 @@ pub fn check_for_transporter(
                 direction.as_delta(),
                 &dimensions,
                 collision_objects.into_iter().map(|(_, object)| object),
-                Weight::Light,
+                Weight::None,
             ) {
                 // If an object on a transporter cannot be moved, the
                 // transporter's [BlocksMovement] component is disabled until
@@ -305,8 +305,6 @@ pub type CollisionObject<'a> = (
     Option<&'a Massive>,
     Option<&'a BlocksPushes>,
     Option<&'a Weight>,
-    Option<&'a Transporter>,
-    Option<&'a Direction>,
     Option<Mut<'a, BlocksMovement>>,
 );
 
@@ -396,9 +394,7 @@ pub fn move_object<'a>(
         if x < 1 || x > dimensions.width || y < 1 || y > dimensions.height {
             return false;
         }
-        for (position, pushable, massive, blocks_pushes, _, transporter, direction, ..) in
-            &collision_objects
-        {
+        for (position, pushable, massive, blocks_pushes, ..) in &collision_objects {
             let has_target_position = position.x == x && position.y == y;
             if !has_target_position {
                 continue;
@@ -406,12 +402,6 @@ pub fn move_object<'a>(
 
             let can_push_to = !pushable.is_some() && !massive.is_some() && !blocks_pushes.is_some();
             if !can_push_to {
-                return false;
-            }
-
-            let has_opposite_facing_transporter = transporter.is_some()
-                && direction.copied() == Direction::try_from((dx, dy)).map(Direction::inverse).ok();
-            if has_opposite_facing_transporter {
                 return false;
             }
         }
