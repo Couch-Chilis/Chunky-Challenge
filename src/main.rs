@@ -96,6 +96,7 @@ fn main() {
         .add_plugins((
             DefaultPlugins.set(WindowPlugin {
                 primary_window: Some(Window {
+                    title: "Chunky's Challenge".to_owned(),
                     mode: get_initial_window_mode(),
                     resolution: WindowResolution::from((DEFAULT_WINDOW_SIZE, DEFAULT_WINDOW_SIZE))
                         .with_scale_factor_override(1.),
