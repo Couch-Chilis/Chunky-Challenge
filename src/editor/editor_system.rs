@@ -27,7 +27,10 @@ pub fn on_editor_button_interaction(
             Interaction::Pressed => {
                 *color = WHITE.into();
                 match button {
-                    Button::Save => commands.trigger(SaveLevel),
+                    Button::Save => commands.trigger(SaveLevel {
+                        save_to_disk: true,
+                        next_level: None,
+                    }),
                 }
             }
             Interaction::Hovered => {
@@ -149,7 +152,7 @@ pub fn spawn_selected_object(
     let object_type_and_direction = selected_object_type.get_object_type_and_direction();
 
     for (entity, object_position, existing_object_type) in &objects {
-        if *object_position != position {
+        if *existing_object_type != ObjectType::Player && *object_position != position {
             continue;
         }
 

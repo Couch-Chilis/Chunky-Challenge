@@ -9,26 +9,26 @@ use bevy::prelude::Resource;
 
 use crate::game_object::{Direction, ObjectType, Position};
 
-pub const LEVELS: &[&str] = &[
-    include_str!("../assets/levels/level000"),
-    include_str!("../assets/levels/level001"),
-    include_str!("../assets/levels/level002"),
-    include_str!("../assets/levels/level003"),
-    include_str!("../assets/levels/level004"),
-    include_str!("../assets/levels/level005"),
-    include_str!("../assets/levels/level006"),
-    include_str!("../assets/levels/level007"),
-    include_str!("../assets/levels/level008"),
-    include_str!("../assets/levels/level009"),
-    include_str!("../assets/levels/level010"),
-    include_str!("../assets/levels/level011"),
-    include_str!("../assets/levels/level012"),
-    include_str!("../assets/levels/level013"),
-    include_str!("../assets/levels/level014"),
-    include_str!("../assets/levels/level015"),
-    include_str!("../assets/levels/level076"),
-    include_str!("../assets/levels/level077"),
-    include_str!("../assets/levels/level095"),
+pub const LEVELS: &[(u16, &str)] = &[
+    (0, include_str!("../assets/levels/level000")),
+    (1, include_str!("../assets/levels/level001")),
+    (2, include_str!("../assets/levels/level002")),
+    (3, include_str!("../assets/levels/level003")),
+    (4, include_str!("../assets/levels/level004")),
+    (5, include_str!("../assets/levels/level005")),
+    (6, include_str!("../assets/levels/level006")),
+    (7, include_str!("../assets/levels/level007")),
+    (8, include_str!("../assets/levels/level008")),
+    (9, include_str!("../assets/levels/level009")),
+    (10, include_str!("../assets/levels/level010")),
+    (11, include_str!("../assets/levels/level011")),
+    (12, include_str!("../assets/levels/level012")),
+    (13, include_str!("../assets/levels/level013")),
+    (14, include_str!("../assets/levels/level014")),
+    (15, include_str!("../assets/levels/level015")),
+    (76, include_str!("../assets/levels/level076")),
+    (77, include_str!("../assets/levels/level077")),
+    (95, include_str!("../assets/levels/level095")),
 ];
 
 #[derive(Clone, Copy, Resource)]

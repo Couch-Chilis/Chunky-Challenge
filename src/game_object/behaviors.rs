@@ -8,7 +8,7 @@ use crate::{
     game_object::Pushable,
     level::{Dimensions, InitialPositionAndMetadata},
     timers::{AnimationTimer, MovementTimer, TemporaryTimer, TransporterTimer},
-    Background, GameEvent, PressedTriggers,
+    Background, GameEvent, PressedTriggers, SaveLevel,
 };
 
 use super::{
@@ -55,22 +55,48 @@ pub fn check_for_deadly(
     }
 }
 
-pub fn check_for_exit(
-    player_query: Query<&Position, With<Player>>,
-    exit_query: Query<&Position, With<Exit>>,
-    mut level_events: EventWriter<GameEvent>,
+pub fn check_for_entrance(
+    mut commands: Commands,
+    player_query: Query<Ref<Position>, With<Player>>,
+    entrance_query: Query<(&Entrance, &Position)>,
 ) {
     for player_position in &player_query {
-        for exit_position in &exit_query {
-            if player_position == exit_position {
-                level_events.send(GameEvent::LoadRelativeLevel(1));
+        if player_position.is_added() || !player_position.is_changed() {
+            continue;
+        }
+
+        for (entrance, entrance_position) in &entrance_query {
+            if player_position.as_ref() == entrance_position {
+                commands.trigger(SaveLevel {
+                    save_to_disk: false,
+                    next_level: Some(entrance.0),
+                });
                 return;
             }
         }
     }
 }
 
-pub type ExplosiveSystemObject<'a> = (Entity, &'a Position, Option<&'a Explosive>);
+pub fn check_for_exit(
+    player_query: Query<Ref<Position>, With<Player>>,
+    exit_query: Query<&Position, With<Exit>>,
+    mut level_events: EventWriter<GameEvent>,
+) {
+    for player_position in &player_query {
+        if player_position.is_added() || !player_position.is_changed() {
+            continue;
+        }
+
+        for exit_position in &exit_query {
+            if player_position.as_ref() == exit_position {
+                level_events.send(GameEvent::LoadLevel(0));
+                return;
+            }
+        }
+    }
+}
+
+pub type ExplosiveSystemObject<'a> = (Entity, Ref<'a, Position>, Option<&'a Explosive>);
 
 pub fn check_for_explosive(
     mut commands: Commands,
@@ -84,10 +110,14 @@ pub fn check_for_explosive(
             .iter()
             .partition(|(_, _, explosive)| explosive.is_some());
 
-    for (explosive, explosive_position, ..) in explosives {
-        for (object, position, _) in &objects {
-            if explosive_position == *position {
-                commands.entity(explosive).despawn();
+    for (object, position, _) in &objects {
+        if !position.is_changed() {
+            continue;
+        }
+
+        for (explosive, explosive_position, ..) in &explosives {
+            if explosive_position.as_ref() == position.as_ref() {
+                commands.entity(*explosive).despawn();
                 commands.entity(*object).despawn();
 
                 let background = background_query
@@ -107,7 +137,7 @@ pub fn check_for_explosive(
 
 pub type LiquidSystemObject<'a> = (
     Entity,
-    &'a Position,
+    Ref<'a, Position>,
     Option<&'a Liquid>,
     Option<&'a Floatable>,
 );
@@ -123,18 +153,24 @@ pub fn check_for_liquid(
         .iter()
         .partition(|(_, _, liquid, ..)| liquid.is_some());
 
-    for (_liquid, liquid_position, ..) in liquids {
-        for (object, position, _, floatable) in &objects {
-            if liquid_position == *position {
+    for (object, position, _, floatable) in &objects {
+        if !position.is_changed() {
+            continue;
+        }
+
+        for (_liquid, liquid_position, ..) in &liquids {
+            if liquid_position.as_ref() == position.as_ref() {
                 if floatable.is_some() {
                     if !objects.iter().any(|(other, other_position, _, floatable)| {
-                        other != object && other_position == position && floatable.is_some()
+                        other != object
+                            && other_position.as_ref() == position.as_ref()
+                            && floatable.is_some()
                     }) {
                         let mut object = commands.entity(*object);
                         object.remove::<Pushable>();
                     }
                 } else if !objects.iter().any(|(_, other_position, _, floatable)| {
-                    other_position == position && floatable.is_some()
+                    other_position.as_ref() == position.as_ref() && floatable.is_some()
                 }) {
                     commands.entity(*object).despawn();
 

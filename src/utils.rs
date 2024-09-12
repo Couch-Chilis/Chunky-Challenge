@@ -9,7 +9,7 @@ use bevy::{
     },
 };
 
-pub fn get_level_filename(level_number: usize) -> String {
+pub fn get_level_filename(level_number: u16) -> String {
     format!("assets/levels/level{level_number:0>3}")
 }
 

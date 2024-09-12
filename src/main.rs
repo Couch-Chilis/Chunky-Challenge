@@ -38,16 +38,28 @@ pub const INITIAL_HUB_FOCUS: (i16, i16) = (33, 26);
 
 #[derive(Resource)]
 struct Levels {
-    current_level: usize,
-    levels: Vec<Cow<'static, str>>,
+    current_level: u16,
+    previous_level: Option<u16>,
+    levels: BTreeMap<u16, Cow<'static, str>>,
 }
 
 impl Default for Levels {
     fn default() -> Self {
         Self {
             current_level: 0,
-            levels: LEVELS.iter().map(|c| (*c).into()).collect(),
+            previous_level: None,
+            levels: LEVELS
+                .iter()
+                .map(|(level_num, data)| (*level_num, (*data).into()))
+                .collect(),
         }
+    }
+}
+
+impl Levels {
+    fn set_current_level(&mut self, level: u16) {
+        self.previous_level = Some(self.current_level);
+        self.current_level = level;
     }
 }
 
@@ -76,7 +88,8 @@ enum GameEvent {
     ChangeWidth(i16),
     ChangeHeight(i16),
     ChangeZoom(f32),
-    LoadRelativeLevel(isize),
+    LoadLevel(u16),
+    LoadRelativeLevel(i16),
     MovePlayer(i16, i16),
     ToggleEditor,
     Exit,
@@ -89,7 +102,10 @@ struct MoveAllObjects {
 }
 
 #[derive(Event)]
-struct SaveLevel;
+struct SaveLevel {
+    save_to_disk: bool,
+    next_level: Option<u16>,
+}
 
 fn main() {
     App::new()
@@ -128,6 +144,7 @@ fn main() {
             (
                 animate_objects,
                 check_for_deadly,
+                check_for_entrance,
                 check_for_exit,
                 check_for_explosive,
                 check_for_liquid,
@@ -308,10 +325,12 @@ fn on_game_event(
                 zoom.factor *= factor;
                 commands.trigger(UpdateBackgroundTransform);
             }
+            GameEvent::LoadLevel(level) => {
+                levels.set_current_level(*level);
+            }
             GameEvent::LoadRelativeLevel(delta) => {
-                levels.current_level = (levels.current_level as isize + delta)
-                    .clamp(0, levels.levels.len() as isize - 1)
-                    as usize;
+                let new_level = levels.current_level.saturating_add_signed(*delta);
+                levels.set_current_level(new_level);
             }
             GameEvent::MovePlayer(dx, dy) => {
                 if let Ok((mut position, weight)) = player_query.get_single_mut() {
@@ -354,25 +373,44 @@ fn load_level(
     mut commands: Commands,
     mut background_query: Query<Entity, With<Background>>,
     mut dimensions: ResMut<Dimensions>,
-    mut levels: ResMut<Levels>,
     mut pressed_triggers: ResMut<PressedTriggers>,
     mut zoom: ResMut<Zoom>,
     assets: Res<GameObjectAssets>,
     fonts: Res<Fonts>,
+    levels: Res<Levels>,
 ) {
     if !levels.is_changed() {
         return;
     }
 
-    if cfg!(unix) && std::env::var_os("SteamTenfoot").is_none() {
-        let current_level = levels.current_level;
-        match fs::read_to_string(get_level_filename(current_level)) {
-            Ok(content) => levels.levels[current_level] = content.into(),
-            Err(error) => println!("Could not read level: {error}"),
+    let Some(level_data) = levels.levels.get(&levels.current_level) else {
+        return;
+    };
+
+    let mut level = Level::load(level_data);
+
+    // If we come from a previous level, we check if the new level has an
+    // entrance to the previous level. If it does, it will be the player's
+    // starting position instead of the one specified by the level.
+    if let Some(previous_level) = levels.previous_level {
+        let entrance_position = level
+            .objects
+            .get(&ObjectType::Entrance)
+            .and_then(|entrances| {
+                entrances
+                    .iter()
+                    .find(|entrance| entrance.level == Some(previous_level))
+            })
+            .map(|entrance| entrance.position);
+
+        if let Some(entrance_position) = entrance_position {
+            if let Some(players) = level.objects.get_mut(&ObjectType::Player) {
+                for player in players {
+                    player.position = entrance_position;
+                }
+            }
         }
     }
-
-    let level = Level::load(&levels.levels[levels.current_level]);
 
     let background_entity = background_query
         .get_single_mut()
@@ -405,7 +443,7 @@ fn move_all_objects(trigger: Trigger<MoveAllObjects>, mut query: Query<&mut Posi
 }
 
 fn save_level(
-    _trigger: Trigger<SaveLevel>,
+    trigger: Trigger<SaveLevel>,
     mut levels: ResMut<Levels>,
     dimensions: Res<Dimensions>,
     objects_query: Query<(
@@ -415,6 +453,11 @@ fn save_level(
         Option<&Entrance>,
     )>,
 ) {
+    let SaveLevel {
+        save_to_disk,
+        next_level,
+    } = trigger.event();
+
     let mut objects = BTreeMap::new();
     for (object_type, position, direction, entrance) in &objects_query {
         if position.x > 0
@@ -445,13 +488,17 @@ fn save_level(
     let content = level.save();
     let current_level = levels.current_level;
 
-    if cfg!(unix) {
+    if *save_to_disk {
         if let Err(error) = fs::write(get_level_filename(current_level), &content) {
             println!("Could not save level: {error}");
         }
     }
 
-    levels.levels[current_level] = content.into();
+    levels.levels.insert(current_level, content.into());
+
+    if let Some(next_level) = next_level {
+        levels.set_current_level(*next_level);
+    }
 }
 
 fn spawn_level_objects(
