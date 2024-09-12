@@ -124,6 +124,7 @@ impl Creature1Bundle {
 #[derive(Bundle)]
 pub struct EntranceBundle {
     object_type: ObjectType,
+    blocks_pushes: BlocksPushes,
     entrance: Entrance,
     position: Position,
     sprite: SpriteBundle,
@@ -133,6 +134,7 @@ impl EntranceBundle {
     pub fn spawn(assets: &GameObjectAssets, position: Position, level: u16) -> Self {
         Self {
             object_type: ObjectType::Entrance,
+            blocks_pushes: BlocksPushes,
             entrance: Entrance(level),
             position,
             sprite: SpriteBundle {
@@ -147,6 +149,7 @@ impl EntranceBundle {
 #[derive(Bundle)]
 pub struct ExitBundle {
     object_type: ObjectType,
+    blocks_pushes: BlocksPushes,
     exit: Exit,
     position: Position,
     sprite: SpriteBundle,
@@ -156,6 +159,7 @@ impl ExitBundle {
     pub fn spawn(assets: &GameObjectAssets, position: Position) -> Self {
         Self {
             object_type: ObjectType::Exit,
+            blocks_pushes: BlocksPushes,
             exit: Exit,
             position,
             sprite: SpriteBundle {
