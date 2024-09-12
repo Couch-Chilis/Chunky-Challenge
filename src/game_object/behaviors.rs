@@ -227,9 +227,20 @@ pub fn check_for_transform_on_push(
     }
 }
 
-pub fn check_for_transporter(
-    mut transporter_query: Query<(&Direction, &Position, &mut BlocksMovement), With<Transporter>>,
-    mut collision_objects_query: Query<(Entity, CollisionObject), Without<Transporter>>,
+#[allow(clippy::type_complexity)]
+pub fn check_for_slippery_and_transporter(
+    mut slippery_query: Query<
+        (&Position, &mut BlocksMovement),
+        (With<Slippery>, Without<Transporter>),
+    >,
+    mut transporter_query: Query<
+        (&Position, &Direction, &mut BlocksMovement),
+        (With<Transporter>, Without<Slippery>),
+    >,
+    mut potential_transportees_query: Query<
+        (Entity, Option<&Direction>, CollisionObject),
+        (Without<Slippery>, Without<Transporter>),
+    >,
     mut timer: ResMut<TransporterTimer>,
     dimensions: Res<Dimensions>,
     time: Res<Time>,
@@ -240,18 +251,47 @@ pub fn check_for_transporter(
     }
 
     let mut already_moved = BTreeSet::new();
-    for (direction, transporter_position, mut blocks_movement) in &mut transporter_query {
-        let (mut transported_objects, collision_objects): (Vec<_>, Vec<_>) =
-            collision_objects_query
-                .iter_mut()
-                .partition(|(_, (position, ..))| position.as_ref() == transporter_position);
-        transported_objects.retain(|(entity, _)| !already_moved.contains(entity));
-        if let Some((transported, (position, ..))) = transported_objects.first_mut() {
+    for (slippery_position, mut blocks_movement) in &mut slippery_query {
+        let (mut transportees, collision_objects): (Vec<_>, Vec<_>) = potential_transportees_query
+            .iter_mut()
+            .partition(|(.., (position, ..))| position.as_ref() == slippery_position);
+        transportees.retain(|(entity, ..)| !already_moved.contains(entity));
+
+        if let Some((transportee, transportee_direction, .., (position, ..))) =
+            transportees.first_mut()
+        {
+            let Some(direction) = transportee_direction else {
+                continue;
+            };
+
             if !move_object(
                 position,
                 direction.as_delta(),
                 &dimensions,
-                collision_objects.into_iter().map(|(_, object)| object),
+                collision_objects.into_iter().map(|(.., object)| object),
+                Weight::None,
+            ) {
+                // If an object on a slippery entity cannot be moved, the
+                // slippery entity's [BlocksMovement] component is disabled
+                // until the object is moved away.
+                *blocks_movement = BlocksMovement::Disabled;
+            }
+            already_moved.insert(*transportee);
+        }
+    }
+
+    for (transporter_position, direction, mut blocks_movement) in &mut transporter_query {
+        let (mut transportees, collision_objects): (Vec<_>, Vec<_>) = potential_transportees_query
+            .iter_mut()
+            .partition(|(.., (position, ..))| position.as_ref() == transporter_position);
+        transportees.retain(|(entity, ..)| !already_moved.contains(entity));
+
+        if let Some((transportee, .., (position, ..))) = transportees.first_mut() {
+            if !move_object(
+                position,
+                direction.as_delta(),
+                &dimensions,
+                collision_objects.into_iter().map(|(.., object)| object),
                 Weight::None,
             ) {
                 // If an object on a transporter cannot be moved, the
@@ -259,7 +299,7 @@ pub fn check_for_transporter(
                 // the object is moved away.
                 *blocks_movement = BlocksMovement::Disabled;
             }
-            already_moved.insert(*transported);
+            already_moved.insert(*transportee);
         }
     }
 }

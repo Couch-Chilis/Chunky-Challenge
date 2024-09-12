@@ -17,6 +17,7 @@ pub struct GameObjectAssets {
     pub exit: Handle<Image>,
     pub gate: (Handle<Image>, Handle<TextureAtlasLayout>),
     pub grave: Handle<Image>,
+    pub ice: Handle<Image>,
     pub mine: Handle<Image>,
     pub player: Handle<Image>,
     pub purple_block: Handle<Image>,
@@ -83,6 +84,7 @@ impl GameObjectAssets {
                 one_by_two_atlas,
             ),
             grave: images.add(load_asset(include_bytes!("../../assets/sprites/grave.png"))),
+            ice: images.add(load_asset(include_bytes!("../../assets/sprites/ice.png"))),
             mine: images.add(load_asset(include_bytes!("../../assets/sprites/mine.png"))),
             player: images.add(load_asset(PLAYER_ASSET)),
             purple_block: images.add(load_asset(include_bytes!(

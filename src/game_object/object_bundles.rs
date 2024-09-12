@@ -4,7 +4,8 @@ use super::{
     assets::GameObjectAssets,
     components::{Exit, Liquid, Massive, Player, Position, Pushable},
     Animatable, BlocksMovement, BlocksPushes, Deadly, Direction, Entrance, Explosive, Floatable,
-    Movable, ObjectType, Openable, TransformOnPush, Transporter, Trigger, Volatile, Weight,
+    Movable, ObjectType, Openable, Slippery, TransformOnPush, Transporter, Trigger, Volatile,
+    Weight,
 };
 
 #[derive(Bundle)]
@@ -232,6 +233,31 @@ impl GraveBundle {
             sprite: SpriteBundle {
                 texture: assets.grave.clone(),
                 transform: Transform::from_translation(Vec3::new(0., 0., 4.)),
+                ..Default::default()
+            },
+        }
+    }
+}
+
+#[derive(Bundle)]
+pub struct IceBundle {
+    object_type: ObjectType,
+    blocks_movement: BlocksMovement,
+    position: Position,
+    slippery: Slippery,
+    sprite: SpriteBundle,
+}
+
+impl IceBundle {
+    pub fn spawn(assets: &GameObjectAssets, position: Position) -> Self {
+        Self {
+            object_type: ObjectType::Ice,
+            blocks_movement: BlocksMovement::Enabled,
+            position,
+            slippery: Slippery,
+            sprite: SpriteBundle {
+                texture: assets.ice.clone(),
+                transform: Transform::from_translation(Vec3::new(0., 0., 1.)),
                 ..Default::default()
             },
         }

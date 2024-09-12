@@ -13,8 +13,8 @@ use super::{
         BlueBlockBundle, BouncingBallBundle, Creature1Bundle, ExitBundle, PlayerBundle, RaftBundle,
         RedBlockBundle, WaterBundle,
     },
-    ButtonBundle, EntranceBundle, GateBundle, MineBundle, PurpleBlockBundle, TransporterBundle,
-    YellowBlockBundle,
+    ButtonBundle, EntranceBundle, GateBundle, IceBundle, MineBundle, PurpleBlockBundle,
+    TransporterBundle, YellowBlockBundle,
 };
 
 #[derive(Clone, Component, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
@@ -26,6 +26,7 @@ pub enum ObjectType {
     Entrance,
     Exit,
     Gate,
+    Ice,
     Mine,
     Player,
     PurpleBlock,
@@ -46,6 +47,7 @@ impl Display for ObjectType {
             Self::Entrance => "Entrance",
             Self::Exit => "Exit",
             Self::Gate => "Gate",
+            Self::Ice => "Ice",
             Self::Mine => "Mine",
             Self::Player => "Player",
             Self::PurpleBlock => "PurpleBlock",
@@ -70,6 +72,7 @@ impl FromStr for ObjectType {
             "Entrance" => Ok(Self::Entrance),
             "Exit" => Ok(Self::Exit),
             "Gate" => Ok(Self::Gate),
+            "Ice" => Ok(Self::Ice),
             "Mine" => Ok(Self::Mine),
             "Player" => Ok(Self::Player),
             "PurpleBlock" => Ok(Self::PurpleBlock),
@@ -129,6 +132,7 @@ pub fn spawn_object_of_type<'a>(
         }
         ObjectType::Exit => cb.spawn(ExitBundle::spawn(assets, position)),
         ObjectType::Gate => cb.spawn(GateBundle::spawn(assets, position)),
+        ObjectType::Ice => cb.spawn(IceBundle::spawn(assets, position)),
         ObjectType::Mine => cb.spawn(MineBundle::spawn(assets, position)),
         ObjectType::Player => cb.spawn(PlayerBundle::spawn(assets, position)),
         ObjectType::PurpleBlock => cb.spawn(PurpleBlockBundle::spawn(assets, position)),

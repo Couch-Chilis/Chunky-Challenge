@@ -152,7 +152,7 @@ pub fn spawn_selected_object(
     let object_type_and_direction = selected_object_type.get_object_type_and_direction();
 
     for (entity, object_position, existing_object_type) in &objects {
-        if *existing_object_type != ObjectType::Player && *object_position != position {
+        if *object_position != position {
             continue;
         }
 

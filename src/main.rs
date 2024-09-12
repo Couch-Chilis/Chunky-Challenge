@@ -149,8 +149,8 @@ fn main() {
                 check_for_explosive,
                 check_for_liquid,
                 check_for_game_over,
+                check_for_slippery_and_transporter,
                 check_for_transform_on_push,
-                check_for_transporter,
                 despawn_volatile_objects,
                 move_objects,
                 on_game_event,
@@ -282,6 +282,13 @@ fn update_entity_directions(mut query: Query<(&Direction, &mut TextureAtlas), Ch
     }
 }
 
+type PlayerComponents<'a> = (
+    Entity,
+    &'a mut Position,
+    Option<&'a mut Direction>,
+    Option<&'a Weight>,
+);
+
 #[allow(clippy::too_many_arguments)]
 fn on_game_event(
     mut commands: Commands,
@@ -290,7 +297,7 @@ fn on_game_event(
     mut dimensions: ResMut<Dimensions>,
     mut level_events: EventReader<GameEvent>,
     mut levels: ResMut<Levels>,
-    mut player_query: Query<(&mut Position, Option<&Weight>), With<Player>>,
+    mut player_query: Query<PlayerComponents, With<Player>>,
     mut menu_state: ResMut<MenuState>,
     mut zoom: ResMut<Zoom>,
     editor_query: Query<Entity, With<Editor>>,
@@ -333,15 +340,25 @@ fn on_game_event(
                 levels.set_current_level(new_level);
             }
             GameEvent::MovePlayer(dx, dy) => {
-                if let Ok((mut position, weight)) = player_query.get_single_mut() {
-                    move_object(
+                if let Ok((player, mut position, player_direction, weight)) =
+                    player_query.get_single_mut()
+                {
+                    if move_object(
                         &mut position,
                         (*dx, *dy),
                         &dimensions,
                         collision_objects_query.iter_mut(),
                         weight.copied().unwrap_or_default(),
-                    );
-                    commands.trigger(UpdateBackgroundTransform);
+                    ) {
+                        if let Ok(direction) = Direction::try_from((*dx, *dy)) {
+                            if let Some(mut player_direction) = player_direction {
+                                *player_direction = direction;
+                            } else {
+                                commands.entity(player).insert(direction);
+                            }
+                        }
+                        commands.trigger(UpdateBackgroundTransform);
+                    }
                 }
             }
             GameEvent::ToggleEditor => {
@@ -426,7 +443,7 @@ fn load_level(
 
     *dimensions = level.dimensions;
 
-    *zoom = if levels.current_level == 0 {
+    *zoom = if levels.current_level == 0 && levels.previous_level.is_none() {
         Zoom::hub_default()
     } else {
         Zoom::level_default()

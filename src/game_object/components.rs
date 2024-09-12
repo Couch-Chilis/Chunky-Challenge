@@ -119,8 +119,9 @@ pub struct Animatable {
 /// An entity that prevents the [Player] as well as other [Movable] entities
 /// from moving when on the same [Position].
 ///
-/// Can be temporarily disabled. This is used for transporters, which will
-/// temporarily stop blocking movement of objects it cannot push further.
+/// Can be temporarily disabled. This is used for transporters and slippery
+/// entities, which will temporarily stop blocking movement of objects it cannot
+/// push further.
 #[derive(Clone, Component, Copy, Default, Eq, PartialEq)]
 pub enum BlocksMovement {
     #[default]
@@ -200,6 +201,12 @@ pub struct Player;
 /// weight.
 #[derive(Component)]
 pub struct Pushable;
+
+/// When an entity with a [Direction] gets onto a slippery entity, it keeps
+/// sliding in that direction until it's no longer on a slippery entity or
+/// cannot move further.
+#[derive(Component)]
+pub struct Slippery;
 
 /// After pushing, entity transforms into another of the given type.
 #[derive(Component)]
