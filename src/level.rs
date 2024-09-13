@@ -47,6 +47,7 @@ impl Default for Dimensions {
     }
 }
 
+#[derive(Clone)]
 pub struct InitialPositionAndMetadata {
     pub position: Position,
     pub direction: Option<Direction>,

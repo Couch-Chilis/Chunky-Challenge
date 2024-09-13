@@ -5,9 +5,10 @@ use crate::{
     fonts::Fonts,
 };
 
-#[derive(Clone, Component, Copy)]
+#[derive(Clone, Component, Copy, Eq, PartialEq)]
 pub enum Button {
     Save,
+    Select,
 }
 
 #[derive(Bundle)]
@@ -26,7 +27,7 @@ impl EditorButtonBundle {
                     border_radius: BorderRadius::all(Val::Px(4.)),
                     style: Style {
                         height: Val::Px(30.),
-                        width: Val::Px(100.),
+                        width: Val::Px(150.),
                         align_content: AlignContent::Center,
                         ..Default::default()
                     },
@@ -36,21 +37,29 @@ impl EditorButtonBundle {
         )
     }
 
-    pub fn populate(cb: &mut ChildBuilder, text: impl Into<String>, fonts: &Fonts) {
-        cb.spawn(TextBundle {
-            text: Text::from_section(
-                text,
-                TextStyle {
-                    font: fonts.poppins_light.clone(),
-                    font_size: 18.,
-                    color: WHITE,
+    pub fn populate(
+        cb: &mut ChildBuilder,
+        marker: impl Bundle,
+        text: impl Into<String>,
+        fonts: &Fonts,
+    ) {
+        cb.spawn((
+            marker,
+            TextBundle {
+                text: Text::from_section(
+                    text,
+                    TextStyle {
+                        font: fonts.poppins_light.clone(),
+                        font_size: 18.,
+                        color: WHITE,
+                    },
+                ),
+                style: Style {
+                    margin: UiRect::all(Val::Auto),
+                    ..Default::default()
                 },
-            ),
-            style: Style {
-                margin: UiRect::all(Val::Auto),
                 ..Default::default()
             },
-            ..Default::default()
-        });
+        ));
     }
 }

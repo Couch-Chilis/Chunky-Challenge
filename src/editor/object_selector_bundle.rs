@@ -1,5 +1,3 @@
-use std::ops::{Deref, DerefMut};
-
 use bevy::prelude::*;
 
 use crate::{
@@ -17,23 +15,6 @@ const SELECTOR_HEIGHT: i16 = NUM_ROWS * GRID_SIZE + (NUM_ROWS - 1) * SELECTOR_OU
 
 #[derive(Component)]
 pub struct ObjectSelector;
-
-#[derive(Default, Resource)]
-pub struct SelectedObjectType(Option<EditorObjectType>);
-
-impl Deref for SelectedObjectType {
-    type Target = Option<EditorObjectType>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl DerefMut for SelectedObjectType {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
-}
 
 #[derive(Clone, Component, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub enum EditorObjectType {

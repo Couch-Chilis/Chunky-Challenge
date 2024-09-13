@@ -19,6 +19,9 @@ pub enum Input {
     Height,
 }
 
+#[derive(Component)]
+pub struct SelectionOverlay;
+
 #[derive(Bundle)]
 pub struct EditorBundle {
     background: NodeBundle,
@@ -69,6 +72,9 @@ impl EditorBundle {
             .with_children(|cb| ObjectSelectorBundle::populate(cb, assets));
 
         cb.spawn(EditorButtonBundle::new(Button::Save))
-            .with_children(|cb| EditorButtonBundle::populate(cb, "Save", fonts));
+            .with_children(|cb| EditorButtonBundle::populate(cb, Button::Save, "Save", fonts));
+
+        cb.spawn(EditorButtonBundle::new(Button::Select))
+            .with_children(|cb| EditorButtonBundle::populate(cb, Button::Select, "Select", fonts));
     }
 }

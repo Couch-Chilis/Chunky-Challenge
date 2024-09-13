@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 use crate::{
-    constants::*, editor::Editor, level::Dimensions, load_level, menu::MenuState, on_resize,
+    constants::*, editor::EditorState, level::Dimensions, load_level, menu::MenuState, on_resize,
     utils::load_repeating_asset, Levels, Player, Position, Zoom, INITIAL_HUB_FOCUS,
 };
 
@@ -73,18 +73,18 @@ fn resize_background(
 fn update_background_transform(
     _trigger: Trigger<UpdateBackgroundTransform>,
     mut background_query: Query<&mut Transform, With<Background>>,
-    editor_query: Query<Entity, With<Editor>>,
     player_query: Query<&Position, With<Player>>,
     window_query: Query<&Window>,
     dimensions: Res<Dimensions>,
+    editor_state: Res<EditorState>,
     levels: Res<Levels>,
     menu_state: Res<MenuState>,
     zoom: Res<Zoom>,
 ) {
-    let (focus_x, focus_y) = if menu_state.is_open && levels.current_level == 0 {
-        (INITIAL_HUB_FOCUS.0 as f32, INITIAL_HUB_FOCUS.1 as f32)
+    let (mut focus_x, mut focus_y) = if menu_state.is_open && levels.current_level == 0 {
+        (INITIAL_HUB_FOCUS.0, INITIAL_HUB_FOCUS.1)
     } else if let Ok(player_position) = player_query.get_single() {
-        (player_position.x as f32, player_position.y as f32)
+        (player_position.x, player_position.y)
     } else {
         return;
     };
@@ -99,12 +99,17 @@ fn update_background_transform(
 
     transform.scale = Vec3::new(zoom.factor, zoom.factor, 1.);
 
-    let editor_open = editor_query.get_single().is_ok();
+    let editor_open = editor_state.is_open;
+    if editor_open {
+        focus_x = focus_x.saturating_add(editor_state.camera_offset.0);
+        focus_y = focus_y.saturating_add(editor_state.camera_offset.1);
+    }
+
     let editor_width = if editor_open { EDITOR_WIDTH as f32 } else { 0. };
     let level_width = (dimensions.width * GRID_SIZE) as f32 * zoom.factor;
     let x = if level_width > window_size.x - editor_width {
         let max = 0.5 * (level_width - (window_size.x - editor_width));
-        (zoom.factor * ((-focus_x + 0.5 * dimensions.width as f32) + 0.5) * GRID_SIZE as f32)
+        (zoom.factor * ((-focus_x as f32 + 0.5 * dimensions.width as f32) + 0.5) * GRID_SIZE as f32)
             .clamp(-max, max)
     } else {
         0.
@@ -112,7 +117,7 @@ fn update_background_transform(
     let level_height = (dimensions.height * GRID_SIZE) as f32 * zoom.factor;
     let y = if level_height > window_size.y {
         let max = 0.5 * (level_height - window_size.y);
-        (zoom.factor * ((focus_y - 0.5 * dimensions.height as f32) - 0.5) * GRID_SIZE as f32)
+        (zoom.factor * ((focus_y as f32 - 0.5 * dimensions.height as f32) - 0.5) * GRID_SIZE as f32)
             .clamp(-max, max)
     } else {
         0.

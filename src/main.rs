@@ -21,7 +21,7 @@ use bevy::{
     winit::WinitWindows,
 };
 use constants::*;
-use editor::{spawn_selected_object, Editor, EditorPlugin, ToggleEditor};
+use editor::{on_left_click, EditorPlugin, EditorState, ToggleEditor};
 use fonts::Fonts;
 use game_object::{
     behaviors::*, spawn_object_of_type, Direction, Entrance, GameObjectAssets, ObjectType, Player,
@@ -85,20 +85,12 @@ impl Zoom {
 
 #[derive(Event)]
 enum GameEvent {
-    ChangeWidth(i16),
-    ChangeHeight(i16),
     ChangeZoom(f32),
     LoadLevel(u16),
     LoadRelativeLevel(i16),
     MovePlayer(i16, i16),
     ToggleEditor,
     Exit,
-}
-
-#[derive(Event)]
-struct MoveAllObjects {
-    dx: i16,
-    dy: i16,
 }
 
 #[derive(Event)]
@@ -135,8 +127,8 @@ fn main() {
         .init_resource::<TransporterTimer>()
         .insert_resource(Zoom::hub_default())
         .add_event::<GameEvent>()
-        .add_event::<MoveAllObjects>()
         .add_event::<SaveLevel>()
+        .observe(save_level)
         .add_systems(Startup, (set_window_icon, setup))
         .add_systems(Update, (on_keyboard_input, on_resize))
         .add_systems(
@@ -166,15 +158,13 @@ fn main() {
         .add_systems(Update, load_level.after(on_game_event))
         .add_systems(
             Update,
-            (position_entities, update_entity_directions)
+            (on_player_moved, position_entities, update_entity_directions)
                 .after(load_level)
                 .after(check_for_explosive)
                 .after(check_for_liquid)
                 .after(move_objects)
-                .after(spawn_selected_object),
+                .after(on_left_click),
         )
-        .observe(move_all_objects)
-        .observe(save_level)
         .run();
 }
 
@@ -203,7 +193,6 @@ fn set_window_icon(windows: NonSend<WinitWindows>) {
 
 fn setup(
     mut commands: Commands,
-    mut events: EventWriter<GameEvent>,
     mut fonts: ResMut<Fonts>,
     mut font_assets: ResMut<Assets<Font>>,
     mut game_object_assets: ResMut<GameObjectAssets>,
@@ -223,17 +212,16 @@ fn setup(
     commands.spawn(Camera2dBundle::default());
 
     setup_gameover(&mut commands, &fonts);
-
-    events.send(GameEvent::LoadRelativeLevel(0));
 }
 
 fn on_keyboard_input(
     mut events: EventWriter<GameEvent>,
     player_query: Query<Entity, With<Player>>,
+    editor_state: Res<EditorState>,
     menu_state: Res<MenuState>,
     keys: Res<ButtonInput<KeyCode>>,
 ) {
-    if menu_state.is_open {
+    if editor_state.is_open || menu_state.is_open {
         return;
     }
 
@@ -294,43 +282,20 @@ fn on_game_event(
     mut commands: Commands,
     mut app_exit_events: EventWriter<AppExit>,
     mut collision_objects_query: Query<CollisionObject, Without<Player>>,
-    mut dimensions: ResMut<Dimensions>,
     mut level_events: EventReader<GameEvent>,
     mut levels: ResMut<Levels>,
     mut player_query: Query<PlayerComponents, With<Player>>,
     mut menu_state: ResMut<MenuState>,
     mut zoom: ResMut<Zoom>,
-    editor_query: Query<Entity, With<Editor>>,
+    dimensions: Res<Dimensions>,
 ) {
     for event in level_events.read() {
         match event {
-            GameEvent::ChangeHeight(delta) => {
-                if dimensions.height + delta > 0 {
-                    dimensions.height += delta;
-
-                    if delta.abs() > 1 {
-                        commands.trigger(MoveAllObjects {
-                            dx: 0,
-                            dy: delta / 2,
-                        });
-                    }
-                }
-            }
-            GameEvent::ChangeWidth(delta) => {
-                if dimensions.width + delta > 0 {
-                    dimensions.width += delta;
-
-                    if delta.abs() > 1 {
-                        commands.trigger(MoveAllObjects {
-                            dx: delta / 2,
-                            dy: 0,
-                        });
-                    }
-                }
-            }
             GameEvent::ChangeZoom(factor) => {
-                zoom.factor *= factor;
-                commands.trigger(UpdateBackgroundTransform);
+                if (*factor < 1. && zoom.factor >= 0.2) || (*factor > 1. && zoom.factor <= 5.) {
+                    zoom.factor *= factor;
+                    commands.trigger(UpdateBackgroundTransform);
+                }
             }
             GameEvent::LoadLevel(level) => {
                 levels.set_current_level(*level);
@@ -357,7 +322,6 @@ fn on_game_event(
                                 commands.entity(player).insert(direction);
                             }
                         }
-                        commands.trigger(UpdateBackgroundTransform);
                     }
                 }
             }
@@ -365,16 +329,20 @@ fn on_game_event(
                 commands.trigger(ToggleEditor);
             }
             GameEvent::Exit => {
-                if editor_query.get_single().is_ok() {
-                    commands.trigger(ToggleEditor);
-                }
-
                 if menu_state.is_open {
                     app_exit_events.send(AppExit::Success);
                 } else {
                     menu_state.is_open = true;
                 }
             }
+        }
+    }
+}
+
+fn on_player_moved(mut commands: Commands, query: Query<Ref<Position>, With<Player>>) {
+    for player_position in &query {
+        if player_position.is_changed() {
+            commands.trigger(UpdateBackgroundTransform);
         }
     }
 }
@@ -448,15 +416,6 @@ fn load_level(
     } else {
         Zoom::level_default()
     };
-}
-
-fn move_all_objects(trigger: Trigger<MoveAllObjects>, mut query: Query<&mut Position>) {
-    let MoveAllObjects { dx, dy } = trigger.event();
-
-    for mut position in &mut query {
-        position.x += *dx;
-        position.y += *dy;
-    }
 }
 
 fn save_level(
