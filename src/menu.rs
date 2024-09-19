@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::{constants::*, fonts::Fonts, setup, GameEvent};
+use crate::{constants::*, editor::ToggleEditor, fonts::Fonts, setup, GameEvent};
 
 pub const MENU_WIDTH: f32 = 500.;
 pub const MENU_HEIGHT: f32 = 400.;
@@ -38,16 +38,8 @@ impl Plugin for MenuPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Startup, setup_menu.after(setup))
             .init_resource::<MenuState>()
-            .add_systems(
-                Update,
-                (on_menu_keyboard_input, on_menu_interaction_input, on_resize),
-            )
-            .add_systems(
-                Update,
-                render_menu
-                    .after(on_menu_keyboard_input)
-                    .after(on_menu_interaction_input),
-            );
+            .add_systems(Update, (on_menu_interaction_input, on_resize))
+            .add_systems(Update, render_menu.after(on_menu_interaction_input));
     }
 }
 
@@ -186,8 +178,10 @@ impl MenuButtonBundle {
     }
 }
 
-fn on_menu_keyboard_input(
-    mut events: EventWriter<GameEvent>,
+pub fn on_menu_keyboard_input(
+    commands: Commands,
+    mut app_exit_events: EventWriter<AppExit>,
+    game_events: EventWriter<GameEvent>,
     mut menu_state: ResMut<MenuState>,
     keys: Res<ButtonInput<KeyCode>>,
 ) {
@@ -201,11 +195,11 @@ fn on_menu_keyboard_input(
             ArrowUp => menu_state.move_selected_button(-1),
             ArrowDown => menu_state.move_selected_button(1),
             Enter | Space => {
-                handle_button_press(events, menu_state);
+                handle_button_press(commands, app_exit_events, game_events, menu_state);
                 return;
             }
             Escape => {
-                events.send(GameEvent::Exit);
+                app_exit_events.send(AppExit::Success);
             }
 
             _ => continue,
@@ -214,7 +208,9 @@ fn on_menu_keyboard_input(
 }
 
 fn on_menu_interaction_input(
-    events: EventWriter<GameEvent>,
+    commands: Commands,
+    app_exit_events: EventWriter<AppExit>,
+    game_events: EventWriter<GameEvent>,
     button_query: Query<(&Interaction, &MenuButton), Changed<Interaction>>,
     mut menu_state: ResMut<MenuState>,
 ) {
@@ -222,7 +218,7 @@ fn on_menu_interaction_input(
         match *interaction {
             Interaction::Pressed => {
                 menu_state.selected_button = *menu_button;
-                handle_button_press(events, menu_state);
+                handle_button_press(commands, app_exit_events, game_events, menu_state);
                 return;
             }
             Interaction::Hovered => {
@@ -244,20 +240,25 @@ fn on_resize(
     }
 }
 
-fn handle_button_press(mut events: EventWriter<GameEvent>, mut menu_state: ResMut<MenuState>) {
+fn handle_button_press(
+    mut commands: Commands,
+    mut app_exit_events: EventWriter<AppExit>,
+    mut game_events: EventWriter<GameEvent>,
+    mut menu_state: ResMut<MenuState>,
+) {
     match menu_state.selected_button {
         MenuButton::Start => {
-            events.send(GameEvent::LoadRelativeLevel(0));
+            game_events.send(GameEvent::LoadRelativeLevel(0));
             menu_state.is_open = false;
         }
         MenuButton::Editor => {
-            events.send(GameEvent::LoadRelativeLevel(0));
-            events.send(GameEvent::ToggleEditor);
+            game_events.send(GameEvent::LoadRelativeLevel(0));
+            commands.trigger(ToggleEditor);
             menu_state.is_open = false;
         }
         MenuButton::OtherGames => { /* TODO */ }
         MenuButton::Exit => {
-            events.send(GameEvent::Exit);
+            app_exit_events.send(AppExit::Success);
         }
         MenuButton::__Last => unreachable!(),
     }

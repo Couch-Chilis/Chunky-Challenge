@@ -7,7 +7,7 @@ use crate::{
     game_object::{spawn_object_of_type, GameObjectAssets, ObjectType, Position},
     level::{Dimensions, InitialPositionAndMetadata},
     timers::{MovementTimer, TemporaryTimer, TransporterTimer},
-    Background, GameEvent, SaveLevel,
+    Background, ChangeZoom, GameEvent, SaveLevel,
 };
 
 use super::{
@@ -328,16 +328,16 @@ pub fn on_editor_keyboard_input(
                 }
             }
             Equal => {
-                events.send(GameEvent::ChangeZoom(1.25));
+                commands.trigger(ChangeZoom(1.25));
             }
             Minus => {
-                events.send(GameEvent::ChangeZoom(0.8));
+                commands.trigger(ChangeZoom(0.8));
             }
             KeyR => {
                 events.send(GameEvent::LoadRelativeLevel(0));
             }
             KeyE | Escape => {
-                events.send(GameEvent::ToggleEditor);
+                commands.trigger(ToggleEditor);
             }
 
             _ => continue,

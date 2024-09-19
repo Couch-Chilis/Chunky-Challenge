@@ -25,7 +25,6 @@ impl Plugin for EditorPlugin {
             (
                 on_dimensions_changed,
                 on_editor_button_interaction,
-                on_editor_keyboard_input,
                 on_editor_number_input_interaction,
                 on_object_selector_input,
                 on_selected_object_change,

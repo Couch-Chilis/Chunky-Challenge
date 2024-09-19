@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::{constants::*, editor::Editor, fonts::Fonts, Player};
+use crate::{constants::*, editor::EditorState, fonts::Fonts, Player};
 
 #[derive(Component)]
 pub struct GameOver;
@@ -47,12 +47,12 @@ pub fn setup_gameover(commands: &mut Commands, fonts: &Fonts) {
 
 pub fn check_for_game_over(
     mut game_over_query: Query<&mut Style, With<GameOver>>,
-    editor_query: Query<Entity, With<Editor>>,
     player_query: Query<Entity, With<Player>>,
+    editor: Res<EditorState>,
 ) {
     let mut game_over_style = game_over_query.get_single_mut().unwrap();
 
-    if player_query.get_single().is_ok() || editor_query.get_single().is_ok() {
+    if player_query.get_single().is_ok() || editor.is_open {
         if game_over_style.display != Display::None {
             game_over_style.display = Display::None;
         }

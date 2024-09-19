@@ -21,7 +21,7 @@ use bevy::{
     winit::WinitWindows,
 };
 use constants::*;
-use editor::{on_left_click, EditorPlugin, EditorState, ToggleEditor};
+use editor::{on_editor_keyboard_input, on_left_click, EditorPlugin, EditorState, ToggleEditor};
 use fonts::Fonts;
 use game_object::{
     behaviors::*, spawn_object_of_type, Direction, Entrance, GameObjectAssets, ObjectType, Player,
@@ -29,7 +29,7 @@ use game_object::{
 };
 use gameover::{check_for_game_over, setup_gameover};
 use level::{Dimensions, InitialPositionAndMetadata, Level, LEVELS};
-use menu::{MenuPlugin, MenuState};
+use menu::{on_menu_keyboard_input, MenuPlugin, MenuState};
 use timers::{AnimationTimer, MovementTimer, TemporaryTimer, TransporterTimer};
 use utils::get_level_filename;
 use winit::window::Icon;
@@ -84,13 +84,13 @@ impl Zoom {
 }
 
 #[derive(Event)]
+struct ChangeZoom(f32);
+
+#[derive(Event)]
 enum GameEvent {
-    ChangeZoom(f32),
     LoadLevel(u16),
     LoadRelativeLevel(i16),
     MovePlayer(i16, i16),
-    ToggleEditor,
-    Exit,
 }
 
 #[derive(Event)]
@@ -126,8 +126,10 @@ fn main() {
         .init_resource::<TemporaryTimer>()
         .init_resource::<TransporterTimer>()
         .insert_resource(Zoom::hub_default())
+        .add_event::<ChangeZoom>()
         .add_event::<GameEvent>()
         .add_event::<SaveLevel>()
+        .observe(on_zoom_change)
         .observe(save_level)
         .add_systems(Startup, (set_window_icon, setup))
         .add_systems(Update, (on_keyboard_input, on_resize))
@@ -215,33 +217,61 @@ fn setup(
 }
 
 fn on_keyboard_input(
-    mut events: EventWriter<GameEvent>,
+    mut commands: Commands,
+    mut game_events: EventWriter<GameEvent>,
+    app_exit_events: EventWriter<AppExit>,
     player_query: Query<Entity, With<Player>>,
-    editor_state: Res<EditorState>,
-    menu_state: Res<MenuState>,
+    mut menu_state: ResMut<MenuState>,
+    editor_state: ResMut<EditorState>,
     keys: Res<ButtonInput<KeyCode>>,
 ) {
-    if editor_state.is_open || menu_state.is_open {
+    if editor_state.is_open {
+        on_editor_keyboard_input(commands, game_events, editor_state, keys);
+        return;
+    } else if menu_state.is_open {
+        on_menu_keyboard_input(commands, app_exit_events, game_events, menu_state, keys);
         return;
     }
 
     for key in keys.get_just_pressed() {
         use KeyCode::*;
         match key {
-            ArrowUp => events.send(GameEvent::MovePlayer(0, -1)),
-            ArrowRight => events.send(GameEvent::MovePlayer(1, 0)),
-            ArrowDown => events.send(GameEvent::MovePlayer(0, 1)),
-            ArrowLeft => events.send(GameEvent::MovePlayer(-1, 0)),
-            Enter if player_query.get_single().is_err() => {
-                events.send(GameEvent::LoadRelativeLevel(0))
+            ArrowUp => {
+                game_events.send(GameEvent::MovePlayer(0, -1));
             }
-            Equal => events.send(GameEvent::ChangeZoom(1.25)),
-            Minus => events.send(GameEvent::ChangeZoom(0.8)),
-            BracketRight => events.send(GameEvent::LoadRelativeLevel(1)),
-            BracketLeft => events.send(GameEvent::LoadRelativeLevel(-1)),
-            KeyE => events.send(GameEvent::ToggleEditor),
-            KeyR => events.send(GameEvent::LoadRelativeLevel(0)),
-            Escape => events.send(GameEvent::Exit),
+            ArrowRight => {
+                game_events.send(GameEvent::MovePlayer(1, 0));
+            }
+            ArrowDown => {
+                game_events.send(GameEvent::MovePlayer(0, 1));
+            }
+            ArrowLeft => {
+                game_events.send(GameEvent::MovePlayer(-1, 0));
+            }
+            Enter if player_query.get_single().is_err() => {
+                game_events.send(GameEvent::LoadRelativeLevel(0));
+            }
+            Equal => {
+                commands.trigger(ChangeZoom(1.25));
+            }
+            Minus => {
+                commands.trigger(ChangeZoom(0.8));
+            }
+            BracketRight => {
+                game_events.send(GameEvent::LoadRelativeLevel(1));
+            }
+            BracketLeft => {
+                game_events.send(GameEvent::LoadRelativeLevel(-1));
+            }
+            KeyE => {
+                commands.trigger(ToggleEditor);
+            }
+            KeyR => {
+                game_events.send(GameEvent::LoadRelativeLevel(0));
+            }
+            Escape => {
+                menu_state.is_open = true;
+            }
 
             _ => continue,
         };
@@ -277,26 +307,16 @@ type PlayerComponents<'a> = (
     Option<&'a Weight>,
 );
 
-#[allow(clippy::too_many_arguments)]
 fn on_game_event(
     mut commands: Commands,
-    mut app_exit_events: EventWriter<AppExit>,
     mut collision_objects_query: Query<CollisionObject, Without<Player>>,
     mut level_events: EventReader<GameEvent>,
     mut levels: ResMut<Levels>,
     mut player_query: Query<PlayerComponents, With<Player>>,
-    mut menu_state: ResMut<MenuState>,
-    mut zoom: ResMut<Zoom>,
     dimensions: Res<Dimensions>,
 ) {
     for event in level_events.read() {
         match event {
-            GameEvent::ChangeZoom(factor) => {
-                if (*factor < 1. && zoom.factor >= 0.2) || (*factor > 1. && zoom.factor <= 5.) {
-                    zoom.factor *= factor;
-                    commands.trigger(UpdateBackgroundTransform);
-                }
-            }
             GameEvent::LoadLevel(level) => {
                 levels.set_current_level(*level);
             }
@@ -325,16 +345,6 @@ fn on_game_event(
                     }
                 }
             }
-            GameEvent::ToggleEditor => {
-                commands.trigger(ToggleEditor);
-            }
-            GameEvent::Exit => {
-                if menu_state.is_open {
-                    app_exit_events.send(AppExit::Success);
-                } else {
-                    menu_state.is_open = true;
-                }
-            }
         }
     }
 }
@@ -349,6 +359,15 @@ fn on_player_moved(mut commands: Commands, query: Query<Ref<Position>, With<Play
 
 fn on_resize(mut commands: Commands, mut resize_reader: EventReader<WindowResized>) {
     if resize_reader.read().last().is_some() {
+        commands.trigger(UpdateBackgroundTransform);
+    }
+}
+
+fn on_zoom_change(trigger: Trigger<ChangeZoom>, mut commands: Commands, mut zoom: ResMut<Zoom>) {
+    let ChangeZoom(factor) = trigger.event();
+
+    if (*factor < 1. && zoom.factor >= 0.2) || (*factor > 1. && zoom.factor <= 5.) {
+        zoom.factor *= factor;
         commands.trigger(UpdateBackgroundTransform);
     }
 }
