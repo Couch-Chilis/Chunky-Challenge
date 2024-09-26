@@ -1,3 +1,5 @@
+use std::{fs, path::PathBuf};
+
 use bevy::{
     prelude::*,
     render::{
@@ -8,6 +10,28 @@ use bevy::{
         },
     },
 };
+
+pub fn ensure_chunky_dir() -> PathBuf {
+    #[allow(deprecated)]
+    let parent_dir = std::env::home_dir().unwrap_or(PathBuf::from("/tmp"));
+
+    let chunky_dir = parent_dir.join(if cfg!(target_os = "ios") {
+        "Library/Application support"
+    } else {
+        ".chunky"
+    });
+    if chunky_dir.exists() {
+        return chunky_dir;
+    }
+
+    match fs::create_dir_all(&chunky_dir) {
+        Ok(()) => chunky_dir,
+        Err(err) => {
+            warn!("Falling back to parent dir ({parent_dir:?}): {err:?}");
+            parent_dir
+        }
+    }
+}
 
 pub fn get_level_filename(level_number: u16) -> String {
     format!("assets/levels/level{level_number:0>3}")

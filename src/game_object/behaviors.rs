@@ -4,9 +4,11 @@ use bevy::prelude::*;
 use rand::{thread_rng, Rng};
 
 use crate::{
+    editor::EditorState,
     fonts::Fonts,
     game_object::Pushable,
-    level::{Dimensions, InitialPositionAndMetadata},
+    game_state::GameState,
+    levels::{Dimensions, InitialPositionAndMetadata},
     timers::{AnimationTimer, MovementTimer, TemporaryTimer, TransporterTimer},
     Background, GameEvent, PressedTriggers, SaveLevel,
 };
@@ -81,6 +83,7 @@ pub fn check_for_exit(
     player_query: Query<Ref<Position>, With<Player>>,
     exit_query: Query<&Position, With<Exit>>,
     mut level_events: EventWriter<GameEvent>,
+    mut game_state: ResMut<GameState>,
 ) {
     for player_position in &player_query {
         if player_position.is_added() || !player_position.is_changed() {
@@ -89,6 +92,8 @@ pub fn check_for_exit(
 
         for exit_position in &exit_query {
             if player_position.as_ref() == exit_position {
+                let finished_level = game_state.current_level;
+                game_state.finished_levels.insert(finished_level);
                 level_events.send(GameEvent::LoadLevel(0));
                 return;
             }
@@ -131,6 +136,21 @@ pub fn check_for_explosive(
                     temporary_timer.reset();
                 }
             }
+        }
+    }
+}
+
+pub fn check_for_finished_levels(
+    mut entrance_query: Query<(&Entrance, &mut TextureAtlas)>,
+    game_state: Res<GameState>,
+) {
+    if !game_state.is_changed() {
+        return;
+    }
+
+    for (entrance, mut atlas) in &mut entrance_query {
+        if game_state.finished_levels.contains(&entrance.0) {
+            atlas.index = 1;
         }
     }
 }
@@ -199,8 +219,13 @@ pub fn check_for_transform_on_push(
         With<Pushable>,
     >,
     assets: Res<GameObjectAssets>,
+    editor_state: Res<EditorState>,
     fonts: Res<Fonts>,
 ) {
+    if editor_state.is_open {
+        return;
+    }
+
     for (entity, direction, position, TransformOnPush(object_type)) in &transform_query {
         if position.is_changed() && !position.is_added() {
             commands.entity(entity).despawn();

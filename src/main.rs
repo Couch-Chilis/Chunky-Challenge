@@ -6,13 +6,14 @@ mod editor;
 mod errors;
 mod fonts;
 mod game_object;
+mod game_state;
 mod gameover;
-mod level;
+mod levels;
 mod menu;
 mod timers;
 mod utils;
 
-use std::{borrow::Cow, collections::BTreeMap, fs};
+use std::{collections::BTreeMap, fs};
 
 use background::{Background, BackgroundPlugin, UpdateBackgroundTransform};
 use bevy::{
@@ -27,41 +28,15 @@ use game_object::{
     behaviors::*, spawn_object_of_type, Direction, Entrance, GameObjectAssets, ObjectType, Player,
     Position, Weight, PLAYER_ASSET,
 };
+use game_state::GameState;
 use gameover::{check_for_game_over, setup_gameover};
-use level::{Dimensions, InitialPositionAndMetadata, Level, LEVELS};
+use levels::{Dimensions, InitialPositionAndMetadata, Level, Levels};
 use menu::{on_menu_keyboard_input, MenuPlugin, MenuState};
 use timers::{AnimationTimer, MovementTimer, TemporaryTimer, TransporterTimer};
 use utils::get_level_filename;
 use winit::window::Icon;
 
 pub const INITIAL_HUB_FOCUS: (i16, i16) = (33, 26);
-
-#[derive(Resource)]
-struct Levels {
-    current_level: u16,
-    previous_level: Option<u16>,
-    levels: BTreeMap<u16, Cow<'static, str>>,
-}
-
-impl Default for Levels {
-    fn default() -> Self {
-        Self {
-            current_level: 0,
-            previous_level: None,
-            levels: LEVELS
-                .iter()
-                .map(|(level_num, data)| (*level_num, (*data).into()))
-                .collect(),
-        }
-    }
-}
-
-impl Levels {
-    fn set_current_level(&mut self, level: u16) {
-        self.previous_level = Some(self.current_level);
-        self.current_level = level;
-    }
-}
 
 #[derive(Default, Resource)]
 struct PressedTriggers {
@@ -125,6 +100,7 @@ fn main() {
         .init_resource::<PressedTriggers>()
         .init_resource::<TemporaryTimer>()
         .init_resource::<TransporterTimer>()
+        .insert_resource(GameState::load())
         .insert_resource(Zoom::hub_default())
         .add_event::<ChangeZoom>()
         .add_event::<GameEvent>()
@@ -160,7 +136,12 @@ fn main() {
         .add_systems(Update, load_level.after(on_game_event))
         .add_systems(
             Update,
-            (on_player_moved, position_entities, update_entity_directions)
+            (
+                check_for_finished_levels,
+                on_player_moved,
+                position_entities,
+                update_entity_directions,
+            )
                 .after(load_level)
                 .after(check_for_explosive)
                 .after(check_for_liquid)
@@ -310,19 +291,19 @@ type PlayerComponents<'a> = (
 fn on_game_event(
     mut commands: Commands,
     mut collision_objects_query: Query<CollisionObject, Without<Player>>,
+    mut game_state: ResMut<GameState>,
     mut level_events: EventReader<GameEvent>,
-    mut levels: ResMut<Levels>,
     mut player_query: Query<PlayerComponents, With<Player>>,
     dimensions: Res<Dimensions>,
 ) {
     for event in level_events.read() {
         match event {
             GameEvent::LoadLevel(level) => {
-                levels.set_current_level(*level);
+                game_state.set_current_level(*level);
             }
             GameEvent::LoadRelativeLevel(delta) => {
-                let new_level = levels.current_level.saturating_add_signed(*delta);
-                levels.set_current_level(new_level);
+                let new_level = game_state.current_level.saturating_add_signed(*delta);
+                game_state.set_current_level(new_level);
             }
             GameEvent::MovePlayer(dx, dy) => {
                 if let Ok((player, mut position, player_direction, weight)) =
@@ -381,13 +362,14 @@ fn load_level(
     mut zoom: ResMut<Zoom>,
     assets: Res<GameObjectAssets>,
     fonts: Res<Fonts>,
+    game_state: Res<GameState>,
     levels: Res<Levels>,
 ) {
-    if !levels.is_changed() {
+    if !game_state.is_changed() {
         return;
     }
 
-    let Some(level_data) = levels.levels.get(&levels.current_level) else {
+    let Some(level_data) = levels.get(&game_state.current_level) else {
         return;
     };
 
@@ -396,7 +378,7 @@ fn load_level(
     // If we come from a previous level, we check if the new level has an
     // entrance to the previous level. If it does, it will be the player's
     // starting position instead of the one specified by the level.
-    if let Some(previous_level) = levels.previous_level {
+    if let Some(previous_level) = game_state.previous_level {
         let entrance_position = level
             .objects
             .get(&ObjectType::Entrance)
@@ -430,7 +412,7 @@ fn load_level(
 
     *dimensions = level.dimensions;
 
-    *zoom = if levels.current_level == 0 && levels.previous_level.is_none() {
+    *zoom = if game_state.current_level == 0 && game_state.previous_level.is_none() {
         Zoom::hub_default()
     } else {
         Zoom::level_default()
@@ -439,6 +421,7 @@ fn load_level(
 
 fn save_level(
     trigger: Trigger<SaveLevel>,
+    mut game_state: ResMut<GameState>,
     mut levels: ResMut<Levels>,
     dimensions: Res<Dimensions>,
     objects_query: Query<(
@@ -481,7 +464,7 @@ fn save_level(
         objects,
     };
     let content = level.save();
-    let current_level = levels.current_level;
+    let current_level = game_state.current_level;
 
     if *save_to_disk {
         if let Err(error) = fs::write(get_level_filename(current_level), &content) {
@@ -489,10 +472,10 @@ fn save_level(
         }
     }
 
-    levels.levels.insert(current_level, content.into());
+    levels.insert(current_level, content.into());
 
     if let Some(next_level) = next_level {
-        levels.set_current_level(*next_level);
+        game_state.set_current_level(*next_level);
     }
 }
 

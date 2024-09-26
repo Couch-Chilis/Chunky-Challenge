@@ -110,7 +110,7 @@ impl EditorObjectType {
             Self::Creature1Right => assets.creature1.0.clone(),
             Self::Creature1Down => assets.creature1.0.clone(),
             Self::Creature1Left => assets.creature1.0.clone(),
-            Self::Entrance => assets.entrance.clone(),
+            Self::Entrance => assets.entrance.0.clone(),
             Self::Exit => assets.exit.clone(),
             Self::Gate => assets.gate.0.clone(),
             Self::Ice => assets.ice.clone(),
@@ -160,6 +160,10 @@ impl EditorObjectType {
             Self::Creature1Left => Some(TextureAtlas {
                 layout: assets.creature1.1.clone(),
                 index: 3,
+            }),
+            Self::Entrance => Some(TextureAtlas {
+                layout: assets.entrance.1.clone(),
+                index: 0,
             }),
             Self::Gate => Some(TextureAtlas {
                 layout: assets.gate.1.clone(),

@@ -4,7 +4,7 @@ use std::str::FromStr;
 use bevy::{ecs::system::EntityCommands, prelude::*};
 
 use crate::{
-    errors::UnknownObjectType, fonts::Fonts, level::InitialPositionAndMetadata, ENTRANCE_TEXT,
+    errors::UnknownObjectType, fonts::Fonts, levels::InitialPositionAndMetadata, ENTRANCE_TEXT,
 };
 
 use super::{

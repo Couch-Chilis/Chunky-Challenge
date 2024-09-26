@@ -124,6 +124,7 @@ impl Creature1Bundle {
 #[derive(Bundle)]
 pub struct EntranceBundle {
     object_type: ObjectType,
+    atlas: TextureAtlas,
     blocks_pushes: BlocksPushes,
     entrance: Entrance,
     position: Position,
@@ -134,11 +135,15 @@ impl EntranceBundle {
     pub fn spawn(assets: &GameObjectAssets, position: Position, level: u16) -> Self {
         Self {
             object_type: ObjectType::Entrance,
+            atlas: TextureAtlas {
+                layout: assets.entrance.1.clone(),
+                index: 0,
+            },
             blocks_pushes: BlocksPushes,
             entrance: Entrance(level),
             position,
             sprite: SpriteBundle {
-                texture: assets.entrance.clone(),
+                texture: assets.entrance.0.clone(),
                 transform: Transform::from_translation(Vec3::new(0., 0., 1.)),
                 ..Default::default()
             },

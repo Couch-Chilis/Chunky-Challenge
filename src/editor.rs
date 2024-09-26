@@ -13,7 +13,7 @@ use object_selector_system::*;
 
 use crate::{
     game_object::{ObjectType, Position},
-    level::InitialPositionAndMetadata,
+    levels::InitialPositionAndMetadata,
 };
 
 pub struct EditorPlugin;

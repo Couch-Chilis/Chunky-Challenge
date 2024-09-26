@@ -5,7 +5,7 @@ use crate::{
     constants::*,
     fonts::Fonts,
     game_object::{spawn_object_of_type, GameObjectAssets, ObjectType, Position},
-    level::{Dimensions, InitialPositionAndMetadata},
+    levels::{Dimensions, InitialPositionAndMetadata},
     timers::{MovementTimer, TemporaryTimer, TransporterTimer},
     Background, ChangeZoom, GameEvent, SaveLevel,
 };
@@ -288,10 +288,6 @@ pub fn on_editor_keyboard_input(
     mut editor_state: ResMut<EditorState>,
     keys: Res<ButtonInput<KeyCode>>,
 ) {
-    if !editor_state.is_open {
-        return;
-    }
-
     for key in keys.get_just_pressed() {
         use KeyCode::*;
         match key {

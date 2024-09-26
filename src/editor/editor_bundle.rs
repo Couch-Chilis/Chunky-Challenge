@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::{constants::*, fonts::Fonts, game_object::GameObjectAssets, level::Dimensions};
+use crate::{constants::*, fonts::Fonts, game_object::GameObjectAssets, levels::Dimensions};
 
 use super::{
     button::{Button, EditorButtonBundle},

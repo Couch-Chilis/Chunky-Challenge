@@ -1,4 +1,5 @@
 use std::{
+    borrow::Cow,
     cmp::Ordering,
     collections::{btree_map::Entry, BTreeMap},
     fmt::Write,
@@ -26,32 +27,40 @@ pub const LEVELS: &[(u16, &str)] = &[
     (13, include_str!("../assets/levels/level013")),
     (14, include_str!("../assets/levels/level014")),
     (15, include_str!("../assets/levels/level015")),
+    (18, include_str!("../assets/levels/level018")),
     (56, include_str!("../assets/levels/level056")),
     (76, include_str!("../assets/levels/level076")),
     (77, include_str!("../assets/levels/level077")),
     (95, include_str!("../assets/levels/level095")),
+    (100, include_str!("../assets/levels/level100")),
 ];
 
-#[derive(Clone, Copy, Resource)]
-pub struct Dimensions {
-    pub width: i16,
-    pub height: i16,
-}
+#[derive(Resource)]
+pub struct Levels(BTreeMap<u16, Cow<'static, str>>);
 
-impl Default for Dimensions {
+impl Default for Levels {
     fn default() -> Self {
-        Self {
-            width: 16,
-            height: 16,
-        }
+        Self(
+            LEVELS
+                .iter()
+                .map(|(level_num, data)| (*level_num, (*data).into()))
+                .collect(),
+        )
     }
 }
 
-#[derive(Clone)]
-pub struct InitialPositionAndMetadata {
-    pub position: Position,
-    pub direction: Option<Direction>,
-    pub level: Option<u16>,
+impl std::ops::Deref for Levels {
+    type Target = BTreeMap<u16, Cow<'static, str>>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl std::ops::DerefMut for Levels {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
 }
 
 pub struct Level {
@@ -214,4 +223,26 @@ impl Level {
         content.push('\n');
         content
     }
+}
+
+#[derive(Clone, Copy, Resource)]
+pub struct Dimensions {
+    pub width: i16,
+    pub height: i16,
+}
+
+impl Default for Dimensions {
+    fn default() -> Self {
+        Self {
+            width: 16,
+            height: 16,
+        }
+    }
+}
+
+#[derive(Clone)]
+pub struct InitialPositionAndMetadata {
+    pub position: Position,
+    pub direction: Option<Direction>,
+    pub level: Option<u16>,
 }
