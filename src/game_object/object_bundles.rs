@@ -44,6 +44,7 @@ pub struct BouncingBallBundle {
     movable: Movable,
     position: Position,
     sprite: SpriteBundle,
+    weight: Weight,
 }
 
 impl BouncingBallBundle {
@@ -60,6 +61,7 @@ impl BouncingBallBundle {
                 transform: Transform::from_translation(Vec3::new(0., 0., 4.)),
                 ..Default::default()
             },
+            weight: Weight::Light,
         }
     }
 }
@@ -97,6 +99,7 @@ pub struct Creature1Bundle {
     movable: Movable,
     position: Position,
     sprite: SpriteBundle,
+    weight: Weight,
 }
 
 impl Creature1Bundle {
@@ -117,6 +120,7 @@ impl Creature1Bundle {
                 transform: Transform::from_translation(Vec3::new(0., 0., 4.)),
                 ..Default::default()
             },
+            weight: Weight::Light,
         }
     }
 }
@@ -208,7 +212,7 @@ pub struct GateBundle {
 }
 
 impl GateBundle {
-    pub fn spawn(assets: &GameObjectAssets, position: Position) -> Self {
+    pub fn spawn(assets: &GameObjectAssets, position: Position, level: Option<u16>) -> Self {
         Self {
             object_type: ObjectType::Gate,
             atlas: TextureAtlas {
@@ -216,7 +220,11 @@ impl GateBundle {
                 index: 0,
             },
             massive: Massive,
-            openable: Openable,
+            openable: if let Some(level) = level {
+                Openable::LevelFinished(level)
+            } else {
+                Openable::Trigger
+            },
             position,
             sprite: SpriteBundle {
                 texture: assets.gate.0.clone(),

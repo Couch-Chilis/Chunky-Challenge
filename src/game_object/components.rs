@@ -186,9 +186,15 @@ pub enum Movable {
     FollowRightHand,
 }
 
-/// A [Massive] entity that can be opened by pressing a [Trigger].
+/// A [Massive] entity that can be opened externally.
 #[derive(Component)]
-pub struct Openable;
+pub enum Openable {
+    /// Entity opens when the given level is finished.
+    LevelFinished(u16),
+
+    /// Entity opens when a [Trigger] is pressed.
+    Trigger,
+}
 
 /// Entity is controlled by the player.
 #[derive(Component)]

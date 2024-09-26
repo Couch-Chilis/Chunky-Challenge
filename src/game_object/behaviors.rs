@@ -140,17 +140,44 @@ pub fn check_for_explosive(
     }
 }
 
+#[allow(clippy::type_complexity)]
 pub fn check_for_finished_levels(
-    mut entrance_query: Query<(&Entrance, &mut TextureAtlas)>,
+    mut commands: Commands,
+    mut query: Query<(
+        Entity,
+        Option<&Entrance>,
+        Option<&Openable>,
+        Option<&Massive>,
+        Option<&mut TextureAtlas>,
+    )>,
     game_state: Res<GameState>,
 ) {
     if !game_state.is_changed() {
         return;
     }
 
-    for (entrance, mut atlas) in &mut entrance_query {
-        if game_state.finished_levels.contains(&entrance.0) {
-            atlas.index = 1;
+    for (entity, entrance, openable, massive, atlas) in &mut query {
+        if let Some(entrance) = entrance {
+            if game_state.finished_levels.contains(&entrance.0) {
+                if let Some(mut atlas) = atlas {
+                    atlas.index = 1;
+                }
+            }
+        } else if let Some(Openable::LevelFinished(level)) = openable {
+            let opened = game_state.finished_levels.contains(level);
+            if opened && massive.is_some() {
+                commands.entity(entity).remove::<Massive>();
+
+                if let Some(mut atlas) = atlas {
+                    atlas.index = 1;
+                }
+            } else if !opened && massive.is_none() {
+                commands.entity(entity).insert(Massive);
+
+                if let Some(mut atlas) = atlas {
+                    atlas.index = 0;
+                }
+            }
         }
     }
 }
@@ -349,7 +376,7 @@ pub fn check_for_triggers(
     for (entity, position, openable, massive, trigger, atlas) in &mut query {
         if trigger.is_some() {
             triggers.push(position);
-        } else if openable.is_some() {
+        } else if matches!(openable, Some(Openable::Trigger)) {
             openables.push((entity, massive, atlas));
         } else {
             objects.push(position);
@@ -367,15 +394,15 @@ pub fn check_for_triggers(
         Ordering::Equal => return, // No change.
     };
 
-    for (openable, massive, atlas) in openables {
+    for (entity, massive, atlas) in openables {
         if opened && massive.is_some() {
-            commands.entity(openable).remove::<Massive>();
+            commands.entity(entity).remove::<Massive>();
 
             if let Some(mut atlas) = atlas {
                 atlas.index = 1;
             }
         } else if !opened && massive.is_none() {
-            commands.entity(openable).insert(Massive);
+            commands.entity(entity).insert(Massive);
 
             if let Some(mut atlas) = atlas {
                 atlas.index = 0;

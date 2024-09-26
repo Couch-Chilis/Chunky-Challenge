@@ -131,7 +131,7 @@ pub fn spawn_object_of_type<'a>(
             cb
         }
         ObjectType::Exit => cb.spawn(ExitBundle::spawn(assets, position)),
-        ObjectType::Gate => cb.spawn(GateBundle::spawn(assets, position)),
+        ObjectType::Gate => cb.spawn(GateBundle::spawn(assets, position, initial_position.level)),
         ObjectType::Ice => cb.spawn(IceBundle::spawn(assets, position)),
         ObjectType::Mine => cb.spawn(MineBundle::spawn(assets, position)),
         ObjectType::Player => cb.spawn(PlayerBundle::spawn(assets, position)),

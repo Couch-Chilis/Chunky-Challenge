@@ -25,8 +25,8 @@ use constants::*;
 use editor::{on_editor_keyboard_input, on_left_click, EditorPlugin, EditorState, ToggleEditor};
 use fonts::Fonts;
 use game_object::{
-    behaviors::*, spawn_object_of_type, Direction, Entrance, GameObjectAssets, ObjectType, Player,
-    Position, Weight, PLAYER_ASSET,
+    behaviors::*, spawn_object_of_type, Direction, Entrance, GameObjectAssets, ObjectType,
+    Openable, Player, Position, Weight, PLAYER_ASSET,
 };
 use game_state::GameState;
 use gameover::{check_for_game_over, setup_gameover};
@@ -419,6 +419,7 @@ fn load_level(
     };
 }
 
+#[allow(clippy::type_complexity)]
 fn save_level(
     trigger: Trigger<SaveLevel>,
     mut game_state: ResMut<GameState>,
@@ -429,6 +430,7 @@ fn save_level(
         &Position,
         Option<&Direction>,
         Option<&Entrance>,
+        Option<&Openable>,
     )>,
 ) {
     let SaveLevel {
@@ -437,7 +439,7 @@ fn save_level(
     } = trigger.event();
 
     let mut objects = BTreeMap::new();
-    for (object_type, position, direction, entrance) in &objects_query {
+    for (object_type, position, direction, entrance, openable) in &objects_query {
         if position.x > 0
             && position.x <= dimensions.width
             && position.y > 0
@@ -447,7 +449,12 @@ fn save_level(
             positions.push(InitialPositionAndMetadata {
                 position: *position,
                 direction: direction.copied(),
-                level: entrance.map(|entrance| entrance.0),
+                level: entrance.map(|entrance| entrance.0).or_else(|| {
+                    openable.and_then(|openable| match openable {
+                        Openable::LevelFinished(level) => Some(*level),
+                        Openable::Trigger => None,
+                    })
+                }),
             });
         }
     }

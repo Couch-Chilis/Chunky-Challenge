@@ -17,24 +17,24 @@ Position=38,79;38,80;38,81;38,82;38,83;38,84
 Position=41,71;41,73;41,75;41,77
 
 [BouncingBall]
-Position=14,21
+Position=16,25
 Position=40,22
 Position=41,22
 Position=42,22
 Position=43,22
 Position=44,22
 Direction=Down
-Position=16,30
+Position=14,24
 
 [Creature1]
-Position=51,22;51,26;51,30
+Position=10,30
+Position=59,21;59,29
 Direction=Right
-Position=12,30
-Position=49,23;49,27
-Position=55,21;55,29
-Position=61,23;61,31
-Direction=Left
-Position=59,29
+Position=57,27
+Direction=Down
+Position=51,26;51,30
+Position=53,24;53,28;53,32
+Position=57,25;57,33
 
 [Entrance]
 Level=60
@@ -152,16 +152,37 @@ Position=61,43
 Position=42,4
 
 [Gate]
-Position=23,23;23,24;23,25;23,26;23,27
-Position=33,17;33,24
+Level=95
+Position=23,23
+Level=96
+Position=23,24
+Level=97
+Position=23,25
+Level=98
+Position=23,26
+Level=99
+Position=23,27
+Level=100
+Position=33,17
+Level=90
+Position=33,24
+Level=91
 Position=34,24
+Level=92
 Position=35,24
+Level=93
 Position=36,24
+Level=94
 Position=37,24
+Level=85
 Position=40,23
+Level=86
 Position=41,23
+Level=87
 Position=42,23
+Level=88
 Position=43,23
+Level=89
 Position=44,23
 
 [Ice]
@@ -194,7 +215,6 @@ Position=56,38;56,45
 Position=63,38;63,45
 
 [Player]
-Direction=Right
 Position=28,79
 
 [PurpleBlock]
