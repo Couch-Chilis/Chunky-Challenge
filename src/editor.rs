@@ -11,10 +11,7 @@ pub use editor_system::*;
 pub use object_selector_bundle::*;
 use object_selector_system::*;
 
-use crate::{
-    game_object::{ObjectType, Position},
-    levels::InitialPositionAndMetadata,
-};
+use crate::game_object::Position;
 
 pub struct EditorPlugin;
 
@@ -36,14 +33,12 @@ impl Plugin for EditorPlugin {
         .add_event::<ChangeHeight>()
         .add_event::<ChangeWidth>()
         .add_event::<MoveAllObjects>()
-        .add_event::<SpawnObject>()
         .add_event::<ToggleEditor>()
         .add_event::<ToggleSelection>()
         .observe(change_height)
         .observe(change_width)
         .observe(move_all_objects)
         .observe(on_activate_selection)
-        .observe(on_spawn_object)
         .observe(on_toggle_editor)
         .observe(on_toggle_selection);
     }
@@ -82,12 +77,6 @@ pub struct ChangeWidth(i16);
 pub struct MoveAllObjects {
     dx: i16,
     dy: i16,
-}
-
-#[derive(Event)]
-pub struct SpawnObject {
-    object_type: ObjectType,
-    initial_position: InitialPositionAndMetadata,
 }
 
 #[derive(Event)]

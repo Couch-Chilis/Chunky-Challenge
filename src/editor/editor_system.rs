@@ -4,16 +4,16 @@ use crate::{
     background::UpdateBackgroundTransform,
     constants::*,
     fonts::Fonts,
-    game_object::{spawn_object_of_type, GameObjectAssets, ObjectType, Position},
+    game_object::{GameObjectAssets, ObjectType, Position},
     levels::{Dimensions, InitialPositionAndMetadata},
     timers::{MovementTimer, TemporaryTimer, TransporterTimer},
-    Background, ChangeZoom, GameEvent, SaveLevel,
+    Background, ChangeZoom, GameEvent, SaveLevel, SpawnObject,
 };
 
 use super::{
     button::Button, number_input::NumberInput, ActivateSelection, ChangeHeight, ChangeWidth,
     Editor, EditorBundle, EditorObjectType, EditorState, Input, MoveAllObjects, SelectionOverlay,
-    SelectionState, SpawnObject, ToggleEditor, ToggleSelection,
+    SelectionState, ToggleEditor, ToggleSelection,
 };
 
 pub fn on_editor_button_interaction(
@@ -273,7 +273,7 @@ fn spawn_selected_object(
     if let Some((object_type, direction)) = object_type_and_direction {
         commands.trigger(SpawnObject {
             object_type,
-            initial_position: InitialPositionAndMetadata {
+            position: InitialPositionAndMetadata {
                 position,
                 direction: Some(direction),
                 identifier: Some(1),
@@ -340,27 +340,6 @@ pub fn on_editor_keyboard_input(
             _ => continue,
         };
     }
-}
-
-pub fn on_spawn_object(
-    trigger: Trigger<SpawnObject>,
-    mut commands: Commands,
-    background_query: Query<Entity, With<Background>>,
-    assets: Res<GameObjectAssets>,
-    fonts: Res<Fonts>,
-) {
-    let SpawnObject {
-        object_type,
-        initial_position,
-    } = trigger.event();
-
-    let background = background_query
-        .get_single()
-        .expect("there should be only one background");
-
-    commands.entity(background).with_children(|cb| {
-        spawn_object_of_type(cb, &assets, &fonts, *object_type, initial_position.clone());
-    });
 }
 
 #[allow(clippy::too_many_arguments)]
