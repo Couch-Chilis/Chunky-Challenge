@@ -31,14 +31,22 @@ impl Plugin for EditorPlugin {
         .init_resource::<EditorState>()
         .add_event::<ActivateSelection>()
         .add_event::<ChangeHeight>()
+        .add_event::<ChangeIdentifier>()
+        .add_event::<ChangeLevel>()
         .add_event::<ChangeWidth>()
+        .add_event::<DeselectObject>()
         .add_event::<MoveAllObjects>()
+        .add_event::<SelectObject>()
         .add_event::<ToggleEditor>()
         .add_event::<ToggleSelection>()
         .observe(change_height)
+        .observe(change_identifier)
+        .observe(change_level)
         .observe(change_width)
         .observe(move_all_objects)
         .observe(on_activate_selection)
+        .observe(on_deselect_object)
+        .observe(on_select_object)
         .observe(on_toggle_editor)
         .observe(on_toggle_selection);
     }
@@ -48,6 +56,7 @@ impl Plugin for EditorPlugin {
 pub struct EditorState {
     pub is_open: bool,
     pub camera_offset: (i16, i16),
+    pub selected_object: Option<Position>,
     pub selected_object_type: Option<EditorObjectType>,
     pub selection: SelectionState,
 }
@@ -71,13 +80,25 @@ pub enum SelectionState {
 pub struct ChangeHeight(i16);
 
 #[derive(Event)]
+pub struct ChangeIdentifier(i16);
+
+#[derive(Event)]
+pub struct ChangeLevel(i16);
+
+#[derive(Event)]
 pub struct ChangeWidth(i16);
+
+#[derive(Event)]
+pub struct DeselectObject;
 
 #[derive(Event)]
 pub struct MoveAllObjects {
     dx: i16,
     dy: i16,
 }
+
+#[derive(Event)]
+pub struct SelectObject(Position);
 
 #[derive(Event)]
 pub struct ToggleEditor;

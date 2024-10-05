@@ -13,11 +13,19 @@ const BORDER_WIDTH: f32 = 2.;
 #[derive(Component)]
 pub struct Editor;
 
-#[derive(Clone, Component, Copy)]
+#[derive(Clone, Component, Copy, Eq, PartialEq)]
 pub enum Input {
     Width,
     Height,
+    Level,
+    Identifier,
 }
+
+#[derive(Component)]
+pub struct IdentifierInput;
+
+#[derive(Component)]
+pub struct LevelInput;
 
 #[derive(Component)]
 pub struct SelectionOverlay;
@@ -76,5 +84,13 @@ impl EditorBundle {
 
         cb.spawn(EditorButtonBundle::new(Button::Select))
             .with_children(|cb| EditorButtonBundle::populate(cb, Button::Select, "Select", fonts));
+
+        cb.spawn(NumberInputBundle::hidden(LevelInput))
+            .with_children(|cb| NumberInputBundle::populate(cb, Input::Level, "Level:", 0, fonts));
+
+        cb.spawn(NumberInputBundle::hidden(IdentifierInput))
+            .with_children(|cb| {
+                NumberInputBundle::populate(cb, Input::Identifier, "Teleporter:", 0, fonts)
+            });
     }
 }

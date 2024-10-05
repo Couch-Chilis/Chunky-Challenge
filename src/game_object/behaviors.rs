@@ -559,7 +559,7 @@ pub fn move_object<'a>(
 ) -> bool {
     let new_x = object_position.x + dx;
     let new_y = object_position.y + dy;
-    if new_x < 1 || new_x > dimensions.width || new_y < 1 || new_y > dimensions.height {
+    if !dimensions.contains((new_x, new_y).into()) {
         return false;
     }
 
@@ -603,12 +603,10 @@ pub fn move_object<'a>(
     };
 
     let can_push_to = |x: i16, y: i16| -> bool {
-        if x < 1 || x > dimensions.width || y < 1 || y > dimensions.height {
-            return false;
-        }
-        collision_objects
-            .iter()
-            .all(|object| !object.has_position((x, y).into()) || object.can_push_on())
+        dimensions.contains((x, y).into())
+            && collision_objects
+                .iter()
+                .all(|object| !object.has_position((x, y).into()) || object.can_push_on())
     };
 
     let mut pushed_object_indices = Vec::new();

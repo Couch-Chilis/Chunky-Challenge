@@ -2,9 +2,10 @@ use bevy::prelude::*;
 
 use crate::constants::*;
 
-use super::{EditorObjectType, EditorState, SELECTOR_OUTLINE_WIDTH};
+use super::{DeselectObject, EditorObjectType, EditorState, SELECTOR_OUTLINE_WIDTH};
 
 pub fn on_object_selector_input(
+    mut commands: Commands,
     mut interaction_query: Query<
         (&Interaction, &EditorObjectType, &mut BackgroundColor),
         Changed<Interaction>,
@@ -17,6 +18,7 @@ pub fn on_object_selector_input(
                 *color = WHITE.into();
 
                 editor_state.selected_object_type = Some(*object_type);
+                commands.trigger(DeselectObject);
             }
             Interaction::Hovered => {
                 *color = LIGHT_GRAY.into();

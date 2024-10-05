@@ -4,15 +4,16 @@ use crate::{
     background::UpdateBackgroundTransform,
     constants::*,
     fonts::Fonts,
-    game_object::{GameObjectAssets, ObjectType, Position},
+    game_object::{Entrance, GameObjectAssets, ObjectType, Position, Teleporter},
     levels::{Dimensions, InitialPositionAndMetadata},
     timers::{MovementTimer, TemporaryTimer, TransporterTimer},
     Background, ChangeZoom, GameEvent, SaveLevel, SpawnObject,
 };
 
 use super::{
-    button::Button, number_input::NumberInput, ActivateSelection, ChangeHeight, ChangeWidth,
-    Editor, EditorBundle, EditorObjectType, EditorState, Input, MoveAllObjects, SelectionOverlay,
+    button::Button, number_input::NumberInput, ActivateSelection, ChangeHeight, ChangeIdentifier,
+    ChangeLevel, ChangeWidth, DeselectObject, Editor, EditorBundle, EditorObjectType, EditorState,
+    IdentifierInput, Input, LevelInput, MoveAllObjects, SelectObject, SelectionOverlay,
     SelectionState, ToggleEditor, ToggleSelection,
 };
 
@@ -76,6 +77,18 @@ pub fn on_editor_number_input_interaction(
                     (Input::Height, NumberInput::Decrease) => {
                         commands.trigger(ChangeHeight(-abs_delta))
                     }
+                    (Input::Identifier, NumberInput::Increase) => {
+                        commands.trigger(ChangeIdentifier(abs_delta))
+                    }
+                    (Input::Identifier, NumberInput::Decrease) => {
+                        commands.trigger(ChangeIdentifier(-abs_delta))
+                    }
+                    (Input::Level, NumberInput::Increase) => {
+                        commands.trigger(ChangeLevel(abs_delta))
+                    }
+                    (Input::Level, NumberInput::Decrease) => {
+                        commands.trigger(ChangeLevel(-abs_delta))
+                    }
                     _ => continue,
                 }
             }
@@ -115,11 +128,11 @@ pub fn on_left_click(
     mut commands: Commands,
     selection_query: Query<&mut Transform, With<SelectionOverlay>>,
     background_query: Query<(Entity, &Transform), (With<Background>, Without<SelectionOverlay>)>,
-    objects: Query<(Entity, &Position, &ObjectType)>,
+    objects: Query<(Entity, &Position)>,
     window_query: Query<&Window, With<PrimaryWindow>>,
+    editor_state: ResMut<EditorState>,
     buttons: Res<ButtonInput<MouseButton>>,
     dimensions: Res<Dimensions>,
-    editor_state: ResMut<EditorState>,
 ) {
     if !buttons.pressed(MouseButton::Left) {
         if let SelectionState::Selecting { start, current } = editor_state.selection {
@@ -129,9 +142,7 @@ pub fn on_left_click(
         return;
     }
 
-    let window = window_query
-        .get_single()
-        .expect("there should be only one window");
+    let window = window_query.single();
     let Some(cursor_position) = window.cursor_position() else {
         return;
     };
@@ -142,9 +153,7 @@ pub fn on_left_click(
         return;
     }
 
-    let (background, transform) = background_query
-        .get_single()
-        .expect("there should be only one background");
+    let (background, transform) = background_query.single();
 
     let center_x = 0.5 * window_size.x + transform.translation.x;
     let x = ((cursor_position.x - center_x) / (transform.scale.x * GRID_SIZE as f32)
@@ -170,14 +179,10 @@ pub fn on_left_click(
             background,
             position,
         );
-    } else if let Some(selected_object_type) = editor_state.selected_object_type {
-        spawn_selected_object(
-            commands,
-            objects,
-            dimensions,
-            position,
-            selected_object_type,
-        );
+    } else if editor_state.selected_object_type.is_some() {
+        spawn_selected_object(commands, editor_state, objects, dimensions, position);
+    } else if dimensions.contains(position) {
+        commands.trigger(SelectObject(position));
     }
 }
 
@@ -240,46 +245,44 @@ fn extend_selection(
 
 fn spawn_selected_object(
     mut commands: Commands,
-    objects: Query<(Entity, &Position, &ObjectType)>,
+    mut editor_state: ResMut<EditorState>,
+    objects: Query<(Entity, &Position)>,
     dimensions: Res<Dimensions>,
     position: Position,
-    selected_object_type: EditorObjectType,
 ) {
-    let object_type_and_direction = selected_object_type.get_object_type_and_direction();
+    let (object_type, direction) = match editor_state
+        .selected_object_type
+        .and_then(EditorObjectType::get_object_type_and_direction)
+    {
+        Some((object_type, direction)) => (Some(object_type), Some(direction)),
+        None => (None, None),
+    };
 
-    for (entity, object_position, existing_object_type) in &objects {
-        if *object_position != position {
-            continue;
+    for (entity, object_position) in &objects {
+        if object_type == Some(ObjectType::Player) || *object_position == position {
+            commands.entity(entity).despawn_recursive();
         }
-
-        if object_type_and_direction
-            .as_ref()
-            .is_some_and(|(object_type, _)| existing_object_type == object_type)
-        {
-            return; // This object is already there.
-        }
-
-        commands.entity(entity).despawn_recursive();
     }
 
-    if position.x < 1
-        || position.x > dimensions.width
-        || position.y < 1
-        || position.y > dimensions.height
-    {
+    if !dimensions.contains(position) {
         return;
     }
 
-    if let Some((object_type, direction)) = object_type_and_direction {
+    if let Some(object_type) = object_type {
         commands.trigger(SpawnObject {
             object_type,
             position: InitialPositionAndMetadata {
                 position,
-                direction: Some(direction),
+                direction,
                 identifier: Some(1),
                 level: Some(1),
             },
         });
+
+        if matches!(object_type, ObjectType::Entrance | ObjectType::Teleporter) {
+            commands.trigger(SelectObject(position));
+            editor_state.selected_object_type = None;
+        }
     }
 }
 
@@ -333,13 +336,72 @@ pub fn on_editor_keyboard_input(
             KeyR => {
                 events.send(GameEvent::LoadRelativeLevel(0));
             }
-            KeyE | Escape => {
+            KeyE => {
                 commands.trigger(ToggleEditor);
+            }
+            Escape => {
+                if !matches!(editor_state.selection, SelectionState::Disabled) {
+                    editor_state.selection = SelectionState::Disabled;
+                } else if editor_state.selected_object_type.is_some() {
+                    editor_state.selected_object_type = None;
+                } else {
+                    commands.trigger(ToggleEditor);
+                }
             }
 
             _ => continue,
         };
     }
+}
+
+pub fn on_select_object(
+    trigger: Trigger<SelectObject>,
+    mut commands: Commands,
+    mut identifier_input_query: Query<&mut Style, (With<IdentifierInput>, Without<LevelInput>)>,
+    mut level_input_query: Query<&mut Style, With<LevelInput>>,
+    mut input_query: Query<(&Input, &NumberInput, &mut Text)>,
+    objects: Query<(&Position, Option<&Entrance>, Option<&Teleporter>)>,
+    mut editor_state: ResMut<EditorState>,
+) {
+    let selected_position = trigger.event().0;
+
+    let Some((_, entrance, teleporter)) = objects
+        .iter()
+        .find(|(position, ..)| **position == selected_position)
+    else {
+        commands.trigger(DeselectObject);
+        return;
+    };
+
+    editor_state.selected_object = Some(selected_position);
+
+    let (input_to_update, value) = if let Some(entrance) = entrance {
+        level_input_query.single_mut().display = Display::Flex;
+        (Input::Level, entrance.0)
+    } else if let Some(teleporter) = teleporter {
+        identifier_input_query.single_mut().display = Display::Flex;
+        (Input::Identifier, teleporter.0)
+    } else {
+        return;
+    };
+
+    for (input, number_input, mut text) in &mut input_query {
+        if *input == input_to_update && *number_input == NumberInput::Value {
+            text.sections[0].value = value.to_string();
+        }
+    }
+}
+
+pub fn on_deselect_object(
+    _trigger: Trigger<DeselectObject>,
+    mut identifier_input_query: Query<&mut Style, (With<IdentifierInput>, Without<LevelInput>)>,
+    mut level_input_query: Query<&mut Style, With<LevelInput>>,
+    mut editor_state: ResMut<EditorState>,
+) {
+    editor_state.selected_object = None;
+
+    level_input_query.single_mut().display = Display::None;
+    identifier_input_query.single_mut().display = Display::None;
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -395,6 +457,8 @@ pub fn on_toggle_selection(
     } else {
         SelectionState::Disabled
     };
+
+    commands.trigger(DeselectObject);
 
     for selection in &mut selection_query {
         commands.entity(selection).despawn();
@@ -455,6 +519,74 @@ pub fn change_height(
                 dx: 0,
                 dy: delta / 2,
             });
+        }
+    }
+}
+
+pub fn change_identifier(
+    trigger: Trigger<ChangeIdentifier>,
+    mut commands: Commands,
+    mut teleporters: Query<(&Position, &mut Teleporter)>,
+    mut input_query: Query<(&Input, &NumberInput, &mut Text)>,
+    editor_state: Res<EditorState>,
+) {
+    let ChangeIdentifier(delta) = trigger.event();
+
+    let Some((_, mut teleporter)) = editor_state.selected_object.and_then(|selected_position| {
+        teleporters
+            .iter_mut()
+            .find(|(position, ..)| **position == selected_position)
+    }) else {
+        commands.trigger(DeselectObject);
+        return;
+    };
+
+    teleporter.0 = teleporter.0.saturating_add_signed(*delta);
+
+    for (input, number_input, mut text) in &mut input_query {
+        if *input == Input::Identifier && *number_input == NumberInput::Value {
+            text.sections[0].value = teleporter.0.to_string();
+        }
+    }
+}
+
+pub fn change_level(
+    trigger: Trigger<ChangeLevel>,
+    mut commands: Commands,
+    mut entrances: Query<(Entity, &Position, &mut Entrance)>,
+    mut input_query: Query<(&Input, &NumberInput, &mut Text)>,
+    editor_state: Res<EditorState>,
+) {
+    let ChangeLevel(delta) = trigger.event();
+
+    let Some((entity, position, mut entrance)) =
+        editor_state.selected_object.and_then(|selected_position| {
+            entrances
+                .iter_mut()
+                .find(|(_, position, ..)| **position == selected_position)
+        })
+    else {
+        commands.trigger(DeselectObject);
+        return;
+    };
+
+    entrance.0 = entrance.0.saturating_add_signed(*delta);
+
+    // Respawn to update the entrance text:
+    commands.entity(entity).despawn_recursive();
+    commands.trigger(SpawnObject {
+        object_type: ObjectType::Entrance,
+        position: InitialPositionAndMetadata {
+            position: *position,
+            direction: None,
+            identifier: None,
+            level: Some(entrance.0),
+        },
+    });
+
+    for (input, number_input, mut text) in &mut input_query {
+        if *input == Input::Level && *number_input == NumberInput::Value {
+            text.sections[0].value = entrance.0.to_string();
         }
     }
 }

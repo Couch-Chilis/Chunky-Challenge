@@ -265,6 +265,13 @@ impl Default for Dimensions {
     }
 }
 
+impl Dimensions {
+    pub fn contains(&self, position: Position) -> bool {
+        let Position { x, y } = position;
+        x >= 1 && x <= self.width && y >= 1 && y <= self.height
+    }
+}
+
 #[derive(Clone)]
 pub struct InitialPositionAndMetadata {
     pub position: Position,

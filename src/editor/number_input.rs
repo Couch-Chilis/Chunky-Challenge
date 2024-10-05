@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 use crate::{constants::*, fonts::Fonts};
 
-#[derive(Component)]
+#[derive(Component, Eq, PartialEq)]
 pub enum NumberInput {
     Increase,
     Decrease,
@@ -30,6 +30,12 @@ impl NumberInputBundle {
                 ..Default::default()
             },
         }
+    }
+
+    pub fn hidden(marker: impl Component) -> impl Bundle {
+        let mut bundle = Self::new();
+        bundle.node.style.display = Display::None;
+        (bundle, marker)
     }
 
     pub fn populate(
