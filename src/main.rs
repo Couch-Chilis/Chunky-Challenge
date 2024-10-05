@@ -26,7 +26,7 @@ use editor::{on_editor_keyboard_input, on_left_click, EditorPlugin, EditorState,
 use fonts::Fonts;
 use game_object::{
     behaviors::*, spawn_object_of_type, Direction, Entrance, GameObjectAssets, ObjectType,
-    Openable, Player, Position, Weight, PLAYER_ASSET,
+    Openable, Player, Position, Teleporter, Weight, PLAYER_ASSET,
 };
 use game_state::GameState;
 use gameover::{check_for_game_over, setup_gameover};
@@ -74,6 +74,12 @@ struct SaveLevel {
     next_level: Option<u16>,
 }
 
+#[derive(Event)]
+struct SpawnObject {
+    object_type: ObjectType,
+    position: InitialPositionAndMetadata,
+}
+
 fn main() {
     App::new()
         .add_plugins((
@@ -105,8 +111,10 @@ fn main() {
         .add_event::<ChangeZoom>()
         .add_event::<GameEvent>()
         .add_event::<SaveLevel>()
+        .add_event::<SpawnObject>()
         .observe(on_zoom_change)
         .observe(save_level)
+        .observe(spawn_object)
         .add_systems(Startup, (set_window_icon, setup))
         .add_systems(Update, (on_keyboard_input, on_resize))
         .add_systems(
@@ -138,6 +146,9 @@ fn main() {
             Update,
             (
                 check_for_finished_levels,
+                check_for_key,
+                check_for_mixables,
+                check_for_paint,
                 on_player_moved,
                 position_entities,
                 update_entity_directions,
@@ -431,6 +442,7 @@ fn save_level(
         Option<&Direction>,
         Option<&Entrance>,
         Option<&Openable>,
+        Option<&Teleporter>,
     )>,
 ) {
     let SaveLevel {
@@ -439,7 +451,7 @@ fn save_level(
     } = trigger.event();
 
     let mut objects = BTreeMap::new();
-    for (object_type, position, direction, entrance, openable) in &objects_query {
+    for (object_type, position, direction, entrance, openable, teleporter) in &objects_query {
         if position.x > 0
             && position.x <= dimensions.width
             && position.y > 0
@@ -449,8 +461,10 @@ fn save_level(
             positions.push(InitialPositionAndMetadata {
                 position: *position,
                 direction: direction.copied(),
+                identifier: teleporter.map(|teleporter| teleporter.0),
                 level: entrance.map(|entrance| entrance.0).or_else(|| {
                     openable.and_then(|openable| match openable {
+                        Openable::Key => None,
                         Openable::LevelFinished(level) => Some(*level),
                         Openable::Trigger => None,
                     })
@@ -487,14 +501,35 @@ fn save_level(
 }
 
 fn spawn_level_objects(
-    commands: &mut ChildBuilder,
+    cb: &mut ChildBuilder,
     objects: BTreeMap<ObjectType, Vec<InitialPositionAndMetadata>>,
     assets: &GameObjectAssets,
     fonts: &Fonts,
 ) {
     for (object_type, initial_positions) in objects {
         for initial_position in initial_positions {
-            spawn_object_of_type(commands, assets, fonts, object_type, initial_position);
+            spawn_object_of_type(cb, assets, fonts, object_type, initial_position);
         }
     }
+}
+
+fn spawn_object(
+    trigger: Trigger<SpawnObject>,
+    mut commands: Commands,
+    background_query: Query<Entity, With<Background>>,
+    assets: Res<GameObjectAssets>,
+    fonts: Res<Fonts>,
+) {
+    let SpawnObject {
+        object_type,
+        position,
+    } = trigger.event();
+
+    let background = background_query
+        .get_single()
+        .expect("there should be only one background");
+    let mut background = commands.entity(background);
+    background.with_children(|cb| {
+        spawn_object_of_type(cb, &assets, &fonts, *object_type, position.clone());
+    });
 }

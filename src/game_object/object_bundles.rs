@@ -4,14 +4,15 @@ use super::{
     assets::GameObjectAssets,
     components::{Exit, Liquid, Massive, Player, Position, Pushable},
     Animatable, BlocksMovement, BlocksPushes, Deadly, Direction, Entrance, Explosive, Floatable,
-    Movable, ObjectType, Openable, Slippery, TransformOnPush, Transporter, Trigger, Volatile,
-    Weight,
+    Key, Mixable, Movable, ObjectType, Openable, Paint, Paintable, Slippery, Teleporter,
+    TransformOnPush, Transporter, Trigger, Volatile, Weight,
 };
 
 #[derive(Bundle)]
 pub struct BlueBlockBundle {
     object_type: ObjectType,
     massive: Massive,
+    paintable: Paintable,
     position: Position,
     pushable: Pushable,
     sprite: SpriteBundle,
@@ -23,6 +24,7 @@ impl BlueBlockBundle {
         Self {
             object_type: ObjectType::BlueBlock,
             massive: Massive,
+            paintable: Paintable,
             position,
             pushable: Pushable,
             sprite: SpriteBundle {
@@ -31,6 +33,35 @@ impl BlueBlockBundle {
                 ..Default::default()
             },
             weight: Weight::Heavy,
+        }
+    }
+}
+
+#[derive(Bundle)]
+pub struct BluePaintBundle {
+    object_type: ObjectType,
+    mixable: Mixable,
+    paint: Paint,
+    position: Position,
+    pushable: Pushable,
+    sprite: SpriteBundle,
+    weight: Weight,
+}
+
+impl BluePaintBundle {
+    pub fn spawn(assets: &GameObjectAssets, position: Position) -> Self {
+        Self {
+            object_type: ObjectType::BluePaint,
+            mixable: Mixable(ObjectType::PurplePaint),
+            paint: Paint(ObjectType::BlueBlock),
+            position,
+            pushable: Pushable,
+            sprite: SpriteBundle {
+                texture: assets.blue_paint.clone(),
+                transform: Transform::from_translation(Vec3::new(0., 0., 2.)),
+                ..Default::default()
+            },
+            weight: Weight::Light,
         }
     }
 }
@@ -121,6 +152,36 @@ impl Creature1Bundle {
                 ..Default::default()
             },
             weight: Weight::Light,
+        }
+    }
+}
+
+#[derive(Bundle)]
+pub struct DoorBundle {
+    object_type: ObjectType,
+    atlas: TextureAtlas,
+    openable: Openable,
+    massive: Massive,
+    position: Position,
+    sprite: SpriteBundle,
+}
+
+impl DoorBundle {
+    pub fn spawn(assets: &GameObjectAssets, position: Position) -> Self {
+        Self {
+            object_type: ObjectType::Door,
+            atlas: TextureAtlas {
+                layout: assets.door.1.clone(),
+                index: 0,
+            },
+            massive: Massive,
+            openable: Openable::Key,
+            position,
+            sprite: SpriteBundle {
+                texture: assets.door.0.clone(),
+                transform: Transform::from_translation(Vec3::new(0., 0., 5.)),
+                ..Default::default()
+            },
         }
     }
 }
@@ -282,6 +343,33 @@ impl IceBundle {
 }
 
 #[derive(Bundle)]
+pub struct KeyBundle {
+    object_type: ObjectType,
+    key: Key,
+    position: Position,
+    pushable: Pushable,
+    sprite: SpriteBundle,
+    weight: Weight,
+}
+
+impl KeyBundle {
+    pub fn spawn(assets: &GameObjectAssets, position: Position) -> Self {
+        Self {
+            object_type: ObjectType::Key,
+            key: Key,
+            position,
+            pushable: Pushable,
+            sprite: SpriteBundle {
+                texture: assets.key.clone(),
+                transform: Transform::from_translation(Vec3::new(0., 0., 2.)),
+                ..Default::default()
+            },
+            weight: Weight::Light,
+        }
+    }
+}
+
+#[derive(Bundle)]
 pub struct MineBundle {
     object_type: ObjectType,
     explosive: Explosive,
@@ -335,6 +423,7 @@ impl PlayerBundle {
 pub struct PurpleBlockBundle {
     object_type: ObjectType,
     massive: Massive,
+    paintable: Paintable,
     position: Position,
     pushable: Pushable,
     sprite: SpriteBundle,
@@ -347,6 +436,7 @@ impl PurpleBlockBundle {
         Self {
             object_type: ObjectType::PurpleBlock,
             massive: Massive,
+            paintable: Paintable,
             position,
             pushable: Pushable,
             sprite: SpriteBundle {
@@ -356,6 +446,35 @@ impl PurpleBlockBundle {
             },
             transforms: TransformOnPush(ObjectType::RedBlock),
             weight: Weight::Heavy,
+        }
+    }
+}
+
+#[derive(Bundle)]
+pub struct PurplePaintBundle {
+    object_type: ObjectType,
+    mixable: Mixable,
+    paint: Paint,
+    position: Position,
+    pushable: Pushable,
+    sprite: SpriteBundle,
+    weight: Weight,
+}
+
+impl PurplePaintBundle {
+    pub fn spawn(assets: &GameObjectAssets, position: Position) -> Self {
+        Self {
+            object_type: ObjectType::PurplePaint,
+            mixable: Mixable(ObjectType::PurplePaint),
+            paint: Paint(ObjectType::PurpleBlock),
+            position,
+            pushable: Pushable,
+            sprite: SpriteBundle {
+                texture: assets.purple_paint.clone(),
+                transform: Transform::from_translation(Vec3::new(0., 0., 2.)),
+                ..Default::default()
+            },
+            weight: Weight::Light,
         }
     }
 }
@@ -391,6 +510,7 @@ impl RaftBundle {
 pub struct RedBlockBundle {
     object_type: ObjectType,
     massive: Massive,
+    paintable: Paintable,
     position: Position,
     sprite: SpriteBundle,
 }
@@ -400,12 +520,42 @@ impl RedBlockBundle {
         Self {
             object_type: ObjectType::RedBlock,
             massive: Massive,
+            paintable: Paintable,
             position,
             sprite: SpriteBundle {
                 texture: assets.red_block.clone(),
                 transform: Transform::from_translation(Vec3::new(0., 0., 2.)),
                 ..Default::default()
             },
+        }
+    }
+}
+
+#[derive(Bundle)]
+pub struct RedPaintBundle {
+    object_type: ObjectType,
+    mixable: Mixable,
+    paint: Paint,
+    position: Position,
+    pushable: Pushable,
+    sprite: SpriteBundle,
+    weight: Weight,
+}
+
+impl RedPaintBundle {
+    pub fn spawn(assets: &GameObjectAssets, position: Position) -> Self {
+        Self {
+            object_type: ObjectType::RedPaint,
+            mixable: Mixable(ObjectType::PurplePaint),
+            paint: Paint(ObjectType::RedBlock),
+            position,
+            pushable: Pushable,
+            sprite: SpriteBundle {
+                texture: assets.red_paint.clone(),
+                transform: Transform::from_translation(Vec3::new(0., 0., 2.)),
+                ..Default::default()
+            },
+            weight: Weight::Light,
         }
     }
 }
@@ -429,6 +579,29 @@ impl SplashBundle {
                 ..Default::default()
             },
             volatile: Volatile,
+        }
+    }
+}
+
+#[derive(Bundle)]
+pub struct TeleporterBundle {
+    object_type: ObjectType,
+    position: Position,
+    sprite: SpriteBundle,
+    teleporter: Teleporter,
+}
+
+impl TeleporterBundle {
+    pub fn spawn(assets: &GameObjectAssets, position: Position, identifier: u16) -> Self {
+        Self {
+            object_type: ObjectType::Transporter,
+            position,
+            sprite: SpriteBundle {
+                texture: assets.teleporter.clone(),
+                transform: Transform::from_translation(Vec3::new(0., 0., 1.)),
+                ..Default::default()
+            },
+            teleporter: Teleporter(identifier),
         }
     }
 }
@@ -499,6 +672,7 @@ impl WaterBundle {
 pub struct YellowBlockBundle {
     object_type: ObjectType,
     massive: Massive,
+    paintable: Paintable,
     position: Position,
     pushable: Pushable,
     sprite: SpriteBundle,
@@ -510,6 +684,7 @@ impl YellowBlockBundle {
         Self {
             object_type: ObjectType::YellowBlock,
             massive: Massive,
+            paintable: Paintable,
             position,
             pushable: Pushable,
             sprite: SpriteBundle {

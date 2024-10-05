@@ -276,6 +276,7 @@ fn spawn_selected_object(
             initial_position: InitialPositionAndMetadata {
                 position,
                 direction: Some(direction),
+                identifier: Some(1),
                 level: Some(1),
             },
         });

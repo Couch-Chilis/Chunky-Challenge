@@ -20,6 +20,7 @@ pub struct ObjectSelector;
 pub enum EditorObjectType {
     Eraser,
     BlueBlock,
+    BluePaint,
     BouncingBallUp,
     BouncingBallRight,
     BouncingBallDown,
@@ -29,15 +30,20 @@ pub enum EditorObjectType {
     Creature1Right,
     Creature1Down,
     Creature1Left,
+    Door,
     Entrance,
     Exit,
     Gate,
+    Key,
     Ice,
     Mine,
     Player,
     PurpleBlock,
+    PurplePaint,
     Raft,
     RedBlock,
+    RedPaint,
+    Teleporter,
     TransporterUp,
     TransporterRight,
     TransporterDown,
@@ -51,6 +57,7 @@ impl EditorObjectType {
     pub fn get_object_type_and_direction(self) -> Option<(ObjectType, Direction)> {
         let object_type = match self {
             Self::BlueBlock => Some(ObjectType::BlueBlock),
+            Self::BluePaint => Some(ObjectType::BluePaint),
             Self::BouncingBallUp
             | Self::BouncingBallRight
             | Self::BouncingBallDown
@@ -60,15 +67,20 @@ impl EditorObjectType {
             | Self::Creature1Right
             | Self::Creature1Down
             | Self::Creature1Left => Some(ObjectType::Creature1),
+            Self::Door => Some(ObjectType::Door),
             Self::Entrance => Some(ObjectType::Entrance),
             Self::Exit => Some(ObjectType::Exit),
             Self::Gate => Some(ObjectType::Gate),
             Self::Ice => Some(ObjectType::Ice),
+            Self::Key => Some(ObjectType::Key),
             Self::Mine => Some(ObjectType::Mine),
             Self::Player => Some(ObjectType::Player),
             Self::PurpleBlock => Some(ObjectType::PurpleBlock),
+            Self::PurplePaint => Some(ObjectType::PurplePaint),
             Self::Raft => Some(ObjectType::Raft),
             Self::RedBlock => Some(ObjectType::RedBlock),
+            Self::RedPaint => Some(ObjectType::RedPaint),
+            Self::Teleporter => Some(ObjectType::Teleporter),
             Self::TransporterUp
             | Self::TransporterRight
             | Self::TransporterDown
@@ -101,6 +113,7 @@ impl EditorObjectType {
         let image = match self {
             Self::Eraser => assets.eraser.clone(),
             Self::BlueBlock => assets.blue_block.clone(),
+            Self::BluePaint => assets.blue_paint.clone(),
             Self::BouncingBallUp
             | Self::BouncingBallRight
             | Self::BouncingBallDown
@@ -110,15 +123,20 @@ impl EditorObjectType {
             Self::Creature1Right => assets.creature1.0.clone(),
             Self::Creature1Down => assets.creature1.0.clone(),
             Self::Creature1Left => assets.creature1.0.clone(),
+            Self::Door => assets.door.0.clone(),
             Self::Entrance => assets.entrance.0.clone(),
             Self::Exit => assets.exit.clone(),
             Self::Gate => assets.gate.0.clone(),
             Self::Ice => assets.ice.clone(),
+            Self::Key => assets.key.clone(),
             Self::Mine => assets.mine.clone(),
             Self::Player => assets.player.clone(),
             Self::PurpleBlock => assets.purple_block.clone(),
+            Self::PurplePaint => assets.purple_paint.clone(),
             Self::Raft => assets.raft.clone(),
             Self::RedBlock => assets.red_block.clone(),
+            Self::RedPaint => assets.red_paint.clone(),
+            Self::Teleporter => assets.teleporter.clone(),
             Self::TransporterUp
             | Self::TransporterRight
             | Self::TransporterDown
@@ -160,6 +178,10 @@ impl EditorObjectType {
             Self::Creature1Left => Some(TextureAtlas {
                 layout: assets.creature1.1.clone(),
                 index: 3,
+            }),
+            Self::Door => Some(TextureAtlas {
+                layout: assets.door.1.clone(),
+                index: 0,
             }),
             Self::Entrance => Some(TextureAtlas {
                 layout: assets.entrance.1.clone(),
@@ -226,7 +248,13 @@ impl TryFrom<i16> for EditorObjectType {
             22 => Self::PurpleBlock,
             23 => Self::YellowBlock,
             24 => Self::Ice,
-            25 => Self::Entrance,
+            25 => Self::Door,
+            26 => Self::Key,
+            27 => Self::PurplePaint,
+            28 => Self::RedPaint,
+            29 => Self::BluePaint,
+            30 => Self::Teleporter,
+            31 => Self::Entrance,
             _ => return Err(()),
         };
         Ok(object_type)

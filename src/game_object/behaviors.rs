@@ -5,18 +5,16 @@ use rand::{thread_rng, Rng};
 
 use crate::{
     editor::EditorState,
-    fonts::Fonts,
     game_object::Pushable,
     game_state::GameState,
     levels::{Dimensions, InitialPositionAndMetadata},
     timers::{AnimationTimer, MovementTimer, TemporaryTimer, TransporterTimer},
-    Background, GameEvent, PressedTriggers, SaveLevel,
+    GameEvent, PressedTriggers, SaveLevel, SpawnObject,
 };
 
 use super::{
     components::{Animatable, Direction, Trigger, *},
-    object_bundles::*,
-    spawn_object_of_type, GameObjectAssets,
+    ObjectType,
 };
 
 pub fn animate_objects(
@@ -34,23 +32,17 @@ pub fn animate_objects(
 
 pub fn check_for_deadly(
     mut commands: Commands,
-    background_query: Query<Entity, With<Background>>,
     deadly_query: Query<(Entity, &Position), With<Deadly>>,
     player_query: Query<(Entity, &Position), With<Player>>,
-    assets: Res<GameObjectAssets>,
 ) {
     for (player, player_position) in &player_query {
         for (deadly, deadly_position) in &deadly_query {
             if player_position == deadly_position {
                 commands.entity(player).despawn();
                 commands.entity(deadly).despawn();
-
-                let background = background_query
-                    .get_single()
-                    .expect("there should be only one background");
-                let mut background = commands.entity(background);
-                background.with_children(|cb| {
-                    cb.spawn(GraveBundle::spawn(&assets, *player_position));
+                commands.trigger(SpawnObject {
+                    object_type: ObjectType::Grave,
+                    position: player_position.into(),
                 });
             }
         }
@@ -101,36 +93,21 @@ pub fn check_for_exit(
     }
 }
 
-pub type ExplosiveSystemObject<'a> = (Entity, Ref<'a, Position>, Option<&'a Explosive>);
-
+#[allow(clippy::type_complexity)]
 pub fn check_for_explosive(
     mut commands: Commands,
-    explosive_query: Query<ExplosiveSystemObject>,
-    background_query: Query<Entity, With<Background>>,
+    explosive_query: Query<(Entity, &Position), With<Explosive>>,
+    moved_objects_query: Query<(Entity, &Position), (Changed<Position>, Without<Explosive>)>,
     mut temporary_timer: ResMut<TemporaryTimer>,
-    assets: Res<GameObjectAssets>,
 ) {
-    let (explosives, objects): (Vec<ExplosiveSystemObject>, Vec<ExplosiveSystemObject>) =
-        explosive_query
-            .iter()
-            .partition(|(_, _, explosive)| explosive.is_some());
-
-    for (object, position, _) in &objects {
-        if !position.is_changed() {
-            continue;
-        }
-
-        for (explosive, explosive_position, ..) in &explosives {
-            if explosive_position.as_ref() == position.as_ref() {
-                commands.entity(*explosive).despawn();
-                commands.entity(*object).despawn();
-
-                let background = background_query
-                    .get_single()
-                    .expect("there should be only one background");
-                let mut background = commands.entity(background);
-                background.with_children(|cb| {
-                    cb.spawn(ExplosionBundle::spawn(&assets, **position));
+    for (object, position) in &moved_objects_query {
+        for (explosive, explosive_position, ..) in &explosive_query {
+            if explosive_position == position {
+                commands.entity(explosive).despawn();
+                commands.entity(object).despawn();
+                commands.trigger(SpawnObject {
+                    object_type: ObjectType::Explosion,
+                    position: position.into(),
                 });
                 if temporary_timer.finished() {
                     temporary_timer.reset();
@@ -182,51 +159,58 @@ pub fn check_for_finished_levels(
     }
 }
 
-pub type LiquidSystemObject<'a> = (
-    Entity,
-    Ref<'a, Position>,
-    Option<&'a Liquid>,
-    Option<&'a Floatable>,
-);
+#[allow(clippy::type_complexity)]
+pub fn check_for_key(
+    mut commands: Commands,
+    mut openable_query: Query<(Entity, &Position, &Openable, Option<&mut TextureAtlas>)>,
+    moved_keys_query: Query<(Entity, &Position), (Changed<Position>, With<Key>)>,
+) {
+    for (key_entity, key_position) in &moved_keys_query {
+        for (openable_entity, openable_position, openable, atlas) in &mut openable_query {
+            if matches!(openable, Openable::Key) && key_position == openable_position {
+                commands.entity(key_entity).despawn();
+                commands.entity(openable_entity).remove::<Massive>();
 
+                if let Some(mut atlas) = atlas {
+                    atlas.index = 1;
+                }
+            }
+        }
+    }
+}
+
+#[allow(clippy::type_complexity)]
 pub fn check_for_liquid(
     mut commands: Commands,
-    liquid_query: Query<LiquidSystemObject>,
-    background_query: Query<Entity, With<Background>>,
+    liquid_query: Query<&Position, With<Liquid>>,
+    moved_objects_query: Query<
+        (Entity, &Position, Option<&Floatable>),
+        (Changed<Position>, Without<Liquid>),
+    >,
+    floatable_objects_query: Query<(Entity, &Position), With<Floatable>>,
     mut temporary_timer: ResMut<TemporaryTimer>,
-    assets: Res<GameObjectAssets>,
 ) {
-    let (liquids, objects): (Vec<LiquidSystemObject>, Vec<LiquidSystemObject>) = liquid_query
-        .iter()
-        .partition(|(_, _, liquid, ..)| liquid.is_some());
-
-    for (object, position, _, floatable) in &objects {
-        if !position.is_changed() {
-            continue;
-        }
-
-        for (_liquid, liquid_position, ..) in &liquids {
-            if liquid_position.as_ref() == position.as_ref() {
+    for (object, position, floatable) in &moved_objects_query {
+        for liquid_position in &liquid_query {
+            if liquid_position == position {
                 if floatable.is_some() {
-                    if !objects.iter().any(|(other, other_position, _, floatable)| {
-                        other != object
-                            && other_position.as_ref() == position.as_ref()
-                            && floatable.is_some()
-                    }) {
-                        let mut object = commands.entity(*object);
+                    if !floatable_objects_query
+                        .iter()
+                        .any(|(other, other_position)| {
+                            other != object && other_position == position
+                        })
+                    {
+                        let mut object = commands.entity(object);
                         object.remove::<Pushable>();
                     }
-                } else if !objects.iter().any(|(_, other_position, _, floatable)| {
-                    other_position.as_ref() == position.as_ref() && floatable.is_some()
-                }) {
-                    commands.entity(*object).despawn();
-
-                    let background = background_query
-                        .get_single()
-                        .expect("there should be only one background");
-                    let mut background = commands.entity(background);
-                    background.with_children(|cb| {
-                        cb.spawn(SplashBundle::spawn(&assets, **position));
+                } else if !floatable_objects_query
+                    .iter()
+                    .any(|(_, other_position)| other_position == position)
+                {
+                    commands.entity(object).despawn();
+                    commands.trigger(SpawnObject {
+                        object_type: ObjectType::Splash,
+                        position: position.into(),
                     });
                     if temporary_timer.finished() {
                         temporary_timer.reset();
@@ -238,16 +222,56 @@ pub fn check_for_liquid(
 }
 
 #[allow(clippy::type_complexity)]
+pub fn check_for_mixables(
+    mut commands: Commands,
+    moved_mixables_query: Query<(Entity, &Position, &Mixable), Changed<Position>>,
+    all_mixables_query: Query<(Entity, &Position, &Mixable)>,
+) {
+    for (moved_mixable_entity, mixable_position, mixable) in &moved_mixables_query {
+        for (other_mixable_entity, other_position, other_mixable) in &all_mixables_query {
+            if moved_mixable_entity != other_mixable_entity
+                && mixable_position == other_position
+                && mixable == other_mixable
+            {
+                commands.entity(moved_mixable_entity).despawn();
+                commands.entity(other_mixable_entity).despawn();
+                commands.trigger(SpawnObject {
+                    object_type: mixable.0,
+                    position: other_position.into(),
+                });
+            }
+        }
+    }
+}
+
+#[allow(clippy::type_complexity)]
+pub fn check_for_paint(
+    mut commands: Commands,
+    moved_paint_query: Query<(Entity, &Position, &Paint), Changed<Position>>,
+    paintable_query: Query<(Entity, &Position), With<Paintable>>,
+) {
+    for (paint_entity, paint_position, paint) in &moved_paint_query {
+        for (paintable_entity, paintable_position) in &paintable_query {
+            if paint_position == paintable_position {
+                commands.entity(paint_entity).despawn();
+                commands.entity(paintable_entity).despawn();
+                commands.trigger(SpawnObject {
+                    object_type: paint.0,
+                    position: paintable_position.into(),
+                });
+            }
+        }
+    }
+}
+
+#[allow(clippy::type_complexity)]
 pub fn check_for_transform_on_push(
     mut commands: Commands,
-    background_query: Query<Entity, With<Background>>,
     transform_query: Query<
         (Entity, Option<&Direction>, Ref<Position>, &TransformOnPush),
         With<Pushable>,
     >,
-    assets: Res<GameObjectAssets>,
     editor_state: Res<EditorState>,
-    fonts: Res<Fonts>,
 ) {
     if editor_state.is_open {
         return;
@@ -256,24 +280,14 @@ pub fn check_for_transform_on_push(
     for (entity, direction, position, TransformOnPush(object_type)) in &transform_query {
         if position.is_changed() && !position.is_added() {
             commands.entity(entity).despawn();
-
-            let background_entity = background_query
-                .get_single()
-                .expect("there should be only one background");
-
-            let mut background = commands.entity(background_entity);
-            background.with_children(|cb| {
-                spawn_object_of_type(
-                    cb,
-                    &assets,
-                    &fonts,
-                    *object_type,
-                    InitialPositionAndMetadata {
-                        position: *position,
-                        direction: direction.copied(),
-                        level: None,
-                    },
-                );
+            commands.trigger(SpawnObject {
+                object_type: *object_type,
+                position: InitialPositionAndMetadata {
+                    position: *position,
+                    direction: direction.copied(),
+                    identifier: None,
+                    level: None,
+                },
             });
         }
     }
@@ -434,6 +448,11 @@ pub type CollisionObject<'a> = (
     Option<&'a BlocksPushes>,
     Option<&'a Weight>,
     Option<Mut<'a, BlocksMovement>>,
+    Option<&'a Key>,
+    Option<&'a Openable>,
+    Option<&'a Mixable>,
+    Option<&'a Paint>,
+    Option<&'a Paintable>,
 );
 
 pub fn move_objects(
@@ -518,27 +537,59 @@ pub fn move_object<'a>(
         (position.x - new_x).abs() + (position.y - new_y).abs()
     });
 
+    let can_mix_with = |x: i16, y: i16, other: &Mixable| -> bool {
+        if x < 1 || x > dimensions.width || y < 1 || y > dimensions.height {
+            return false;
+        }
+        collision_objects
+            .iter()
+            .any(|(position, .., mixable, _, _)| {
+                position.x == x
+                    && position.y == y
+                    && mixable.is_some_and(|mixable| mixable == other)
+            })
+    };
+
+    let can_open_with_key = |x: i16, y: i16| -> bool {
+        if x < 1 || x > dimensions.width || y < 1 || y > dimensions.height {
+            return false;
+        }
+        collision_objects
+            .iter()
+            .any(|(position, .., openable, _, _, _)| {
+                position.x == x && position.y == y && matches!(openable, Some(&Openable::Key))
+            })
+    };
+
+    let can_paint = |x: i16, y: i16| -> bool {
+        if x < 1 || x > dimensions.width || y < 1 || y > dimensions.height {
+            return false;
+        }
+        collision_objects.iter().any(|(position, .., paintable)| {
+            position.x == x && position.y == y && paintable.is_some()
+        })
+    };
+
     let can_push_to = |x: i16, y: i16| -> bool {
         if x < 1 || x > dimensions.width || y < 1 || y > dimensions.height {
             return false;
         }
-        for (position, pushable, massive, blocks_pushes, ..) in &collision_objects {
-            let has_target_position = position.x == x && position.y == y;
-            if !has_target_position {
-                continue;
-            }
-
-            let can_push_to = !pushable.is_some() && !massive.is_some() && !blocks_pushes.is_some();
-            if !can_push_to {
-                return false;
-            }
-        }
-        true
+        collision_objects
+            .iter()
+            .all(|(position, pushable, massive, blocks_pushes, ..)| {
+                if position.x == x && position.y == y {
+                    !massive.is_some() && !pushable.is_some() && !blocks_pushes.is_some()
+                } else {
+                    true
+                }
+            })
     };
 
     let mut pushed_object_indices = Vec::new();
-    for (index, (position, pushable, massive, _, weight, .., blocks_movement)) in
-        collision_objects.iter().enumerate()
+    for (
+        index,
+        (position, pushable, massive, _, weight, .., blocks_movement, key, _, mixable, paint, _),
+    ) in collision_objects.iter().enumerate()
     {
         if position.as_ref() == object_position.as_ref()
             && blocks_movement
@@ -549,8 +600,18 @@ pub fn move_object<'a>(
         }
 
         if position.x == new_x && position.y == new_y {
+            let can_push_to_or_mix_or_open_or_paint = |x: i16, y: i16| -> bool {
+                can_push_to(x, y)
+                    || key.is_some() && can_open_with_key(x, y)
+                    || mixable.is_some_and(|mixable| can_mix_with(x, y, mixable))
+                    || paint.is_some() && can_paint(x, y)
+            };
+
             let weight = weight.copied().unwrap_or_default();
-            if weight <= max_weight && pushable.is_some() && can_push_to(new_x + dx, new_y + dy) {
+            if weight <= max_weight
+                && pushable.is_some()
+                && can_push_to_or_mix_or_open_or_paint(new_x + dx, new_y + dy)
+            {
                 pushed_object_indices.push(index);
                 continue;
             }
@@ -567,7 +628,7 @@ pub fn move_object<'a>(
         position.y += dy;
     }
 
-    for (position, .., blocks_movement) in &mut collision_objects {
+    for (position, .., blocks_movement, _, _, _, _, _) in &mut collision_objects {
         if let Some(blocks_movement) = blocks_movement {
             if position.as_ref() == object_position.as_ref() {
                 **blocks_movement = BlocksMovement::Enabled;

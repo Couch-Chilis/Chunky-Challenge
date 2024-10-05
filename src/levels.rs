@@ -73,6 +73,7 @@ impl Level {
     pub fn load(content: &str) -> Self {
         let mut dimensions = Dimensions::default();
         let mut direction = None;
+        let mut identifier = None;
         let mut level = None;
         let mut objects: BTreeMap<ObjectType, Vec<InitialPositionAndMetadata>> = BTreeMap::new();
 
@@ -82,6 +83,8 @@ impl Level {
 
             if line.starts_with('[') && line.ends_with(']') {
                 direction = None;
+                identifier = None;
+                level = None;
                 section_name = Some(&line[1..line.len() - 1]);
                 continue;
             }
@@ -120,6 +123,7 @@ impl Level {
                             (Ok(x), Ok(y)) => Some(InitialPositionAndMetadata {
                                 position: Position { x, y },
                                 direction,
+                                identifier,
                                 level,
                             }),
                             _ => {
@@ -145,6 +149,13 @@ impl Level {
                     Ok(value) => direction = Some(value),
                     Err(_) => {
                         println!("Unknown direction: {value}");
+                    }
+                }
+            } else if key == "Identifier" {
+                match value.parse() {
+                    Ok(value) => identifier = Some(value),
+                    Err(_) => {
+                        println!("Cannot parse identifier: {value}");
                     }
                 }
             } else if key == "Level" {
@@ -179,11 +190,13 @@ impl Level {
             });
 
             let mut current_direction = Direction::default();
+            let mut current_identifier = 0;
             let mut current_level = 0;
             let mut last_x = None;
             for InitialPositionAndMetadata {
                 position,
                 direction,
+                identifier,
                 level,
             } in positions
             {
@@ -195,6 +208,17 @@ impl Level {
 
                         writeln!(content, "Direction={direction}").expect("writing failed");
                         current_direction = direction;
+                    }
+                }
+
+                if let Some(identifier) = identifier {
+                    if identifier != current_identifier {
+                        if !content.ends_with('\n') {
+                            content.push('\n');
+                        }
+
+                        writeln!(content, "Identifier={identifier}").expect("writing failed");
+                        current_identifier = identifier;
                     }
                 }
 
@@ -245,5 +269,17 @@ impl Default for Dimensions {
 pub struct InitialPositionAndMetadata {
     pub position: Position,
     pub direction: Option<Direction>,
+    pub identifier: Option<u16>,
     pub level: Option<u16>,
+}
+
+impl From<&Position> for InitialPositionAndMetadata {
+    fn from(position: &Position) -> Self {
+        Self {
+            position: *position,
+            direction: None,
+            identifier: None,
+            level: None,
+        }
+    }
 }

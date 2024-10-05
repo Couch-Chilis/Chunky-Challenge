@@ -156,6 +156,10 @@ pub struct Explosive;
 #[derive(Component)]
 pub struct Floatable;
 
+/// Entity acts as a key for opening [Openable::Key] entities.
+#[derive(Component)]
+pub struct Key;
+
 /// Liquid entities will cause other entities to sink when it comes into
 /// contact with them. An exception are [Floatable] entities.
 ///
@@ -170,6 +174,13 @@ pub struct Liquid;
 /// other entities from moving when it cannot be pushed further.
 #[derive(Component)]
 pub struct Massive;
+
+/// Mixable allows for mixing different kinds of [Paint].
+///
+/// When two mixable entities with the same [ObjectType] are pushed onto one
+/// another, they transform into a new [Paint] object for that object type.
+#[derive(Component, Eq, PartialEq)]
+pub struct Mixable(pub ObjectType);
 
 /// Movable entities move by themselves.
 ///
@@ -189,6 +200,9 @@ pub enum Movable {
 /// A [Massive] entity that can be opened externally.
 #[derive(Component)]
 pub enum Openable {
+    /// Entity opens when a key is pushed onto it.
+    Key,
+
     /// Entity opens when the given level is finished.
     LevelFinished(u16),
 
@@ -199,6 +213,16 @@ pub enum Openable {
 /// Entity is controlled by the player.
 #[derive(Component)]
 pub struct Player;
+
+/// Entity that can paint [Paintable] entities.
+///
+/// Painting transforms the paintable entity into the given [ObjectType].
+#[derive(Component)]
+pub struct Paint(pub ObjectType);
+
+/// An entity that can be [Paint]ed.
+#[derive(Component)]
+pub struct Paintable;
 
 /// A movable entity will be "pushed" if possible when another entity attempts
 /// to move onto it.
@@ -218,6 +242,13 @@ pub struct Slippery;
 #[derive(Component)]
 pub struct TransformOnPush(pub ObjectType);
 
+/// Entity that can transport other entities to another teleporter.
+///
+/// Teleporters are bi-directional and the target teleporter is the one with the
+/// same identifier.
+#[derive(Component)]
+pub struct Teleporter(pub u16);
+
 /// Entity pushes all other entities that are placed on it towards a given
 /// [Direction].
 ///
@@ -226,7 +257,7 @@ pub struct TransformOnPush(pub ObjectType);
 #[derive(Component)]
 pub struct Transporter;
 
-/// Entity acts as trigger for opening gates.
+/// Entity acts as trigger for opening [Openable::Trigger] entities.
 #[derive(Component)]
 pub struct Trigger;
 
