@@ -17,7 +17,7 @@ pub type CollisionObjectQuery<'a> = (
 );
 
 pub struct CollisionObject<'a> {
-    pub(super) blocks_movement: Option<&'a mut BlocksMovement>,
+    pub(super) blocks_movement: Option<Mut<'a, BlocksMovement>>,
     blocks_pushes: Option<&'a BlocksPushes>,
     key: Option<&'a Key>,
     massive: Option<&'a Massive>,
@@ -25,7 +25,7 @@ pub struct CollisionObject<'a> {
     openable: Option<&'a Openable>,
     paint: Option<&'a Paint>,
     paintable: Option<&'a Paintable>,
-    pub(super) position: &'a mut Position,
+    pub(super) position: Mut<'a, Position>,
     pushable: Option<&'a Pushable>,
     weight: Option<&'a Weight>,
 }
@@ -47,24 +47,6 @@ impl<'a> From<CollisionObjectQuery<'a>> for CollisionObject<'a> {
         ) = query;
 
         Self {
-            blocks_movement: blocks_movement.map(|blocks_movement| blocks_movement.into_inner()),
-            blocks_pushes,
-            key,
-            massive,
-            mixable,
-            openable,
-            paint,
-            paintable,
-            position: position.into_inner(),
-            pushable,
-            weight,
-        }
-    }
-}
-
-impl<'a> From<&'a mut CollisionObjectQuery<'a>> for CollisionObject<'a> {
-    fn from(query: &'a mut CollisionObjectQuery<'a>) -> Self {
-        let (
             blocks_movement,
             blocks_pushes,
             key,
@@ -76,22 +58,6 @@ impl<'a> From<&'a mut CollisionObjectQuery<'a>> for CollisionObject<'a> {
             position,
             pushable,
             weight,
-        ) = query;
-
-        Self {
-            blocks_movement: blocks_movement
-                .as_mut()
-                .map(|blocks_movement| blocks_movement.as_mut()),
-            blocks_pushes: *blocks_pushes,
-            key: *key,
-            massive: *massive,
-            mixable: *mixable,
-            openable: *openable,
-            paint: *paint,
-            paintable: *paintable,
-            position: position.as_mut(),
-            pushable: *pushable,
-            weight: *weight,
         }
     }
 }
@@ -116,7 +82,7 @@ impl<'a> CollisionObject<'a> {
     }
 
     pub fn has_position(&self, position: Position) -> bool {
-        self.position == &position
+        self.position.as_ref() == &position
     }
 
     pub fn is_key(&self) -> bool {
@@ -136,7 +102,7 @@ impl<'a> CollisionObject<'a> {
     }
 
     pub fn is_pushable(&self) -> bool {
-        self.paint.is_some()
+        self.pushable.is_some()
     }
 
     pub fn weight(&self) -> Weight {

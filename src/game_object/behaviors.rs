@@ -379,6 +379,55 @@ pub fn check_for_slippery_and_transporter(
 }
 
 #[allow(clippy::type_complexity)]
+pub fn check_for_teleporter(
+    mut objects_query: Query<(Mut<Position>, Option<&Massive>), Without<Teleporter>>,
+    teleporters_query: Query<(&Position, &Teleporter)>,
+) {
+    if !objects_query
+        .iter()
+        .filter(|(position, _)| position.is_changed())
+        .any(|(position, _)| {
+            teleporters_query
+                .iter()
+                .any(|(teleporter_position, _)| position.as_ref() == teleporter_position)
+        })
+    {
+        return;
+    }
+
+    let (mut moved_objects, possible_collisions): (Vec<_>, Vec<_>) = objects_query
+        .iter_mut()
+        .filter(|(position, _)| {
+            teleporters_query
+                .iter()
+                .any(|(teleporter_position, _)| position.as_ref() == teleporter_position)
+        })
+        .partition(|(position, _)| position.is_changed());
+
+    for (ref mut position, _) in &mut moved_objects {
+        for (teleporter_position, teleporter) in &teleporters_query {
+            if position.as_ref() == teleporter_position {
+                if let Some((target_position, _)) =
+                    teleporters_query
+                        .iter()
+                        .find(|(target_position, target_teleporter)| {
+                            *target_position != teleporter_position
+                                && *target_teleporter == teleporter
+                        })
+                {
+                    if !possible_collisions.iter().any(|(position, massive)| {
+                        position.as_ref() == target_position && massive.is_some()
+                    }) {
+                        *position.as_mut() = *target_position;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+}
+
+#[allow(clippy::type_complexity)]
 pub fn check_for_triggers(
     mut commands: Commands,
     mut trigger_query: Query<(
@@ -502,7 +551,7 @@ pub fn move_objects(
 }
 
 pub fn move_object<'a>(
-    object_position: &mut Position,
+    object_position: &mut Mut<Position>,
     (dx, dy): (i16, i16),
     dimensions: &Dimensions,
     collision_objects: impl Iterator<Item = CollisionObject<'a>>,
@@ -516,7 +565,7 @@ pub fn move_object<'a>(
 
     let mut collision_objects: Vec<_> = collision_objects
         .filter(|CollisionObject { position, .. }| {
-            *position == object_position
+            position.as_ref() == object_position.as_ref()
                 || if dx > 0 {
                     position.x >= new_x && position.y == new_y
                 } else if dx < 0 {
@@ -564,7 +613,7 @@ pub fn move_object<'a>(
 
     let mut pushed_object_indices = Vec::new();
     for (index, collision_object) in collision_objects.iter().enumerate() {
-        if collision_object.has_position(*object_position) && collision_object.blocks_movement() {
+        if collision_object.has_position(**object_position) && collision_object.blocks_movement() {
             return false;
         }
 
@@ -599,7 +648,7 @@ pub fn move_object<'a>(
     }
 
     for collission_object in &mut collision_objects {
-        if collission_object.has_position(*object_position) {
+        if collission_object.has_position(**object_position) {
             if let Some(blocks_movement) = collission_object.blocks_movement.as_mut() {
                 **blocks_movement = BlocksMovement::Enabled;
             }

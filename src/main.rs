@@ -149,6 +149,7 @@ fn main() {
                 check_for_key,
                 check_for_mixables,
                 check_for_paint,
+                check_for_teleporter,
                 on_player_moved,
                 position_entities,
                 update_entity_directions,

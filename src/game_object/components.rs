@@ -252,7 +252,7 @@ pub struct TransformOnPush(pub ObjectType);
 ///
 /// Teleporters are bi-directional and the target teleporter is the one with the
 /// same identifier.
-#[derive(Component)]
+#[derive(Component, Eq, PartialEq)]
 pub struct Teleporter(pub u16);
 
 /// Entity pushes all other entities that are placed on it towards a given
