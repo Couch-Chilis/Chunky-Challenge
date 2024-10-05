@@ -25,8 +25,8 @@ use constants::*;
 use editor::{on_editor_keyboard_input, on_left_click, EditorPlugin, EditorState, ToggleEditor};
 use fonts::Fonts;
 use game_object::{
-    behaviors::*, spawn_object_of_type, Direction, Entrance, GameObjectAssets, ObjectType,
-    Openable, Player, Position, Teleporter, Weight, PLAYER_ASSET,
+    behaviors::*, spawn_object_of_type, CollisionObjectQuery, Direction, Entrance,
+    GameObjectAssets, ObjectType, Openable, Player, Position, Teleporter, Weight, PLAYER_ASSET,
 };
 use game_state::GameState;
 use gameover::{check_for_game_over, setup_gameover};
@@ -301,7 +301,7 @@ type PlayerComponents<'a> = (
 
 fn on_game_event(
     mut commands: Commands,
-    mut collision_objects_query: Query<CollisionObject, Without<Player>>,
+    mut collision_objects_query: Query<CollisionObjectQuery, Without<Player>>,
     mut game_state: ResMut<GameState>,
     mut level_events: EventReader<GameEvent>,
     mut player_query: Query<PlayerComponents, With<Player>>,
@@ -324,7 +324,7 @@ fn on_game_event(
                         &mut position,
                         (*dx, *dy),
                         &dimensions,
-                        collision_objects_query.iter_mut(),
+                        collision_objects_query.iter_mut().map(Into::into),
                         weight.copied().unwrap_or_default(),
                     ) {
                         if let Ok(direction) = Direction::try_from((*dx, *dy)) {

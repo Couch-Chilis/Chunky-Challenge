@@ -13,6 +13,7 @@ use crate::{
 };
 
 use super::{
+    collission_object::{CollisionObject, CollisionObjectQuery},
     components::{Animatable, Direction, Trigger, *},
     ObjectType,
 };
@@ -304,7 +305,7 @@ pub fn check_for_slippery_and_transporter(
         (With<Transporter>, Without<Slippery>),
     >,
     mut potential_transportees_query: Query<
-        (Entity, Option<&Direction>, CollisionObject),
+        (Entity, Option<&Direction>, CollisionObjectQuery),
         (Without<Slippery>, Without<Transporter>),
     >,
     mut timer: ResMut<TransporterTimer>,
@@ -320,10 +321,13 @@ pub fn check_for_slippery_and_transporter(
     for (slippery_position, mut blocks_movement) in &mut slippery_query {
         let (mut transportees, collision_objects): (Vec<_>, Vec<_>) = potential_transportees_query
             .iter_mut()
-            .partition(|(.., (position, ..))| position.as_ref() == slippery_position);
+            .map(|(entity, direction, collision_object)| {
+                (entity, direction, CollisionObject::from(collision_object))
+            })
+            .partition(|(.., object)| object.has_position(*slippery_position));
         transportees.retain(|(entity, ..)| !already_moved.contains(entity));
 
-        if let Some((transportee, transportee_direction, .., (position, ..))) =
+        if let Some((transportee, transportee_direction, CollisionObject { position, .. })) =
             transportees.first_mut()
         {
             let Some(direction) = transportee_direction else {
@@ -349,10 +353,14 @@ pub fn check_for_slippery_and_transporter(
     for (transporter_position, direction, mut blocks_movement) in &mut transporter_query {
         let (mut transportees, collision_objects): (Vec<_>, Vec<_>) = potential_transportees_query
             .iter_mut()
-            .partition(|(.., (position, ..))| position.as_ref() == transporter_position);
+            .map(|(entity, direction, collision_object)| {
+                (entity, direction, CollisionObject::from(collision_object))
+            })
+            .partition(|(.., object)| object.has_position(*transporter_position));
         transportees.retain(|(entity, ..)| !already_moved.contains(entity));
 
-        if let Some((transportee, .., (position, ..))) = transportees.first_mut() {
+        if let Some((transportee, .., CollisionObject { position, .. })) = transportees.first_mut()
+        {
             if !move_object(
                 position,
                 direction.as_delta(),
@@ -441,23 +449,9 @@ pub fn despawn_volatile_objects(
     }
 }
 
-pub type CollisionObject<'a> = (
-    Mut<'a, Position>,
-    Option<&'a Pushable>,
-    Option<&'a Massive>,
-    Option<&'a BlocksPushes>,
-    Option<&'a Weight>,
-    Option<Mut<'a, BlocksMovement>>,
-    Option<&'a Key>,
-    Option<&'a Openable>,
-    Option<&'a Mixable>,
-    Option<&'a Paint>,
-    Option<&'a Paintable>,
-);
-
 pub fn move_objects(
     mut movable_query: Query<(&mut Direction, &Movable, &mut Position, Option<&Weight>)>,
-    mut collision_objects_query: Query<CollisionObject, Without<Movable>>,
+    mut collision_objects_query: Query<CollisionObjectQuery, Without<Movable>>,
     mut timer: ResMut<MovementTimer>,
     dimensions: Res<Dimensions>,
     time: Res<Time>,
@@ -474,7 +468,7 @@ pub fn move_objects(
                     &mut position,
                     direction.as_delta(),
                     &dimensions,
-                    collision_objects_query.iter_mut(),
+                    collision_objects_query.iter_mut().map(Into::into),
                     weight.copied().unwrap_or_default(),
                 ) {
                     *direction = direction.inverse();
@@ -485,7 +479,7 @@ pub fn move_objects(
                     &mut position,
                     direction.right_hand().as_delta(),
                     &dimensions,
-                    collision_objects_query.iter_mut(),
+                    collision_objects_query.iter_mut().map(Into::into),
                     weight.copied().unwrap_or_default(),
                 ) {
                     *direction = direction.right_hand();
@@ -493,7 +487,7 @@ pub fn move_objects(
                     &mut position,
                     direction.as_delta(),
                     &dimensions,
-                    collision_objects_query.iter_mut(),
+                    collision_objects_query.iter_mut().map(Into::into),
                     weight.copied().unwrap_or_default(),
                 ) {
                     *direction = direction.left_hand();
@@ -504,7 +498,7 @@ pub fn move_objects(
 }
 
 pub fn move_object<'a>(
-    object_position: &mut Mut<Position>,
+    object_position: &mut Position,
     (dx, dy): (i16, i16),
     dimensions: &Dimensions,
     collision_objects: impl Iterator<Item = CollisionObject<'a>>,
@@ -517,8 +511,8 @@ pub fn move_object<'a>(
     }
 
     let mut collision_objects: Vec<_> = collision_objects
-        .filter(|(position, ..)| {
-            position.as_ref() == object_position.as_ref()
+        .filter(|CollisionObject { position, .. }| {
+            *position == object_position
                 || if dx > 0 {
                     position.x >= new_x && position.y == new_y
                 } else if dx < 0 {
@@ -533,41 +527,26 @@ pub fn move_object<'a>(
         })
         .collect();
 
-    collision_objects.sort_unstable_by_key(|(position, ..)| {
+    collision_objects.sort_unstable_by_key(|CollisionObject { position, .. }| {
         (position.x - new_x).abs() + (position.y - new_y).abs()
     });
 
     let can_mix_with = |x: i16, y: i16, other: &Mixable| -> bool {
-        if x < 1 || x > dimensions.width || y < 1 || y > dimensions.height {
-            return false;
-        }
         collision_objects
             .iter()
-            .any(|(position, .., mixable, _, _)| {
-                position.x == x
-                    && position.y == y
-                    && mixable.is_some_and(|mixable| mixable == other)
-            })
+            .any(|object| object.has_position((x, y).into()) && object.can_mix_with(other))
     };
 
     let can_open_with_key = |x: i16, y: i16| -> bool {
-        if x < 1 || x > dimensions.width || y < 1 || y > dimensions.height {
-            return false;
-        }
         collision_objects
             .iter()
-            .any(|(position, .., openable, _, _, _)| {
-                position.x == x && position.y == y && matches!(openable, Some(&Openable::Key))
-            })
+            .any(|object| object.has_position((x, y).into()) && object.can_open_with_key())
     };
 
     let can_paint = |x: i16, y: i16| -> bool {
-        if x < 1 || x > dimensions.width || y < 1 || y > dimensions.height {
-            return false;
-        }
-        collision_objects.iter().any(|(position, .., paintable)| {
-            position.x == x && position.y == y && paintable.is_some()
-        })
+        collision_objects
+            .iter()
+            .any(|object| object.has_position((x, y).into()) && object.is_paintable())
     };
 
     let can_push_to = |x: i16, y: i16| -> bool {
@@ -576,61 +555,48 @@ pub fn move_object<'a>(
         }
         collision_objects
             .iter()
-            .all(|(position, pushable, massive, blocks_pushes, ..)| {
-                if position.x == x && position.y == y {
-                    !massive.is_some() && !pushable.is_some() && !blocks_pushes.is_some()
-                } else {
-                    true
-                }
-            })
+            .all(|object| !object.has_position((x, y).into()) || object.can_push_on())
     };
 
     let mut pushed_object_indices = Vec::new();
-    for (
-        index,
-        (position, pushable, massive, _, weight, .., blocks_movement, key, _, mixable, paint, _),
-    ) in collision_objects.iter().enumerate()
-    {
-        if position.as_ref() == object_position.as_ref()
-            && blocks_movement
-                .as_ref()
-                .is_some_and(|blocks| *blocks.as_ref() == BlocksMovement::Enabled)
-        {
+    for (index, collision_object) in collision_objects.iter().enumerate() {
+        if collision_object.has_position(*object_position) && collision_object.blocks_movement() {
             return false;
         }
 
-        if position.x == new_x && position.y == new_y {
+        if collision_object.has_position((new_x, new_y).into()) {
             let can_push_to_or_mix_or_open_or_paint = |x: i16, y: i16| -> bool {
                 can_push_to(x, y)
-                    || key.is_some() && can_open_with_key(x, y)
-                    || mixable.is_some_and(|mixable| can_mix_with(x, y, mixable))
-                    || paint.is_some() && can_paint(x, y)
+                    || collision_object.is_key() && can_open_with_key(x, y)
+                    || collision_object
+                        .mixable
+                        .is_some_and(|mixable| can_mix_with(x, y, mixable))
+                    || collision_object.is_paint() && can_paint(x, y)
             };
 
-            let weight = weight.copied().unwrap_or_default();
-            if weight <= max_weight
-                && pushable.is_some()
+            if collision_object.weight() <= max_weight
+                && collision_object.is_pushable()
                 && can_push_to_or_mix_or_open_or_paint(new_x + dx, new_y + dy)
             {
                 pushed_object_indices.push(index);
                 continue;
             }
 
-            if massive.is_some() {
+            if collision_object.is_massive() {
                 return false;
             }
         }
     }
 
     for index in pushed_object_indices {
-        let position = &mut collision_objects[index].0;
+        let position = &mut collision_objects[index].position;
         position.x += dx;
         position.y += dy;
     }
 
-    for (position, .., blocks_movement, _, _, _, _, _) in &mut collision_objects {
-        if let Some(blocks_movement) = blocks_movement {
-            if position.as_ref() == object_position.as_ref() {
+    for collission_object in &mut collision_objects {
+        if collission_object.has_position(*object_position) {
+            if let Some(blocks_movement) = collission_object.blocks_movement.as_mut() {
                 **blocks_movement = BlocksMovement::Enabled;
             }
         }

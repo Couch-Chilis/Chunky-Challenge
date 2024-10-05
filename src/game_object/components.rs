@@ -24,6 +24,12 @@ impl Display for Position {
     }
 }
 
+impl From<(i16, i16)> for Position {
+    fn from((x, y): (i16, i16)) -> Self {
+        Self { x, y }
+    }
+}
+
 #[derive(Clone, Component, Copy, Debug, Default, Eq, Ord, PartialEq, PartialOrd)]
 pub enum Direction {
     #[default]
