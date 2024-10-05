@@ -378,24 +378,28 @@ pub fn check_for_slippery_and_transporter(
     }
 }
 
-pub type TriggerSystemObject<'a> = (
-    Entity,
-    &'a Position,
-    Option<&'a Openable>,
-    Option<&'a Massive>,
-    Option<&'a Trigger>,
-    Option<&'a mut TextureAtlas>,
-);
-
+#[allow(clippy::type_complexity)]
 pub fn check_for_triggers(
     mut commands: Commands,
-    mut query: Query<TriggerSystemObject>,
+    mut trigger_query: Query<(
+        Entity,
+        &Position,
+        Option<&Openable>,
+        Option<&Massive>,
+        Option<&Trigger>,
+        Option<&mut TextureAtlas>,
+    )>,
+    moved_objects_query: Query<Entity, Changed<Position>>,
     mut pressed_triggers: ResMut<PressedTriggers>,
 ) {
+    if moved_objects_query.iter().next().is_none() {
+        return;
+    }
+
     let mut triggers = Vec::new();
     let mut openables = Vec::new();
     let mut objects = Vec::new();
-    for (entity, position, openable, massive, trigger, atlas) in &mut query {
+    for (entity, position, openable, massive, trigger, atlas) in &mut trigger_query {
         if trigger.is_some() {
             triggers.push(position);
         } else if matches!(openable, Some(Openable::Trigger)) {

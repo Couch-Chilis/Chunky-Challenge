@@ -18,16 +18,16 @@ pub type CollisionObjectQuery<'a> = (
 
 pub struct CollisionObject<'a> {
     pub(super) blocks_movement: Option<&'a mut BlocksMovement>,
-    pub blocks_pushes: Option<&'a BlocksPushes>,
-    pub key: Option<&'a Key>,
-    pub massive: Option<&'a Massive>,
+    blocks_pushes: Option<&'a BlocksPushes>,
+    key: Option<&'a Key>,
+    massive: Option<&'a Massive>,
     pub(super) mixable: Option<&'a Mixable>,
-    pub openable: Option<&'a Openable>,
-    pub paint: Option<&'a Paint>,
-    pub paintable: Option<&'a Paintable>,
+    openable: Option<&'a Openable>,
+    paint: Option<&'a Paint>,
+    paintable: Option<&'a Paintable>,
     pub(super) position: &'a mut Position,
-    pub pushable: Option<&'a Pushable>,
-    pub weight: Option<&'a Weight>,
+    pushable: Option<&'a Pushable>,
+    weight: Option<&'a Weight>,
 }
 
 impl<'a> From<CollisionObjectQuery<'a>> for CollisionObject<'a> {
