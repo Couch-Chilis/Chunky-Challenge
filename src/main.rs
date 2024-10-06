@@ -13,7 +13,7 @@ mod menu;
 mod timers;
 mod utils;
 
-use std::{collections::BTreeMap, fs};
+use std::{borrow::Cow, collections::BTreeMap, fs};
 
 use background::{Background, BackgroundPlugin, UpdateBackgroundTransform};
 use bevy::{
@@ -33,7 +33,7 @@ use gameover::{check_for_game_over, setup_gameover};
 use levels::{Dimensions, InitialPositionAndMetadata, Level, Levels};
 use menu::{on_menu_keyboard_input, MenuPlugin, MenuState};
 use timers::{AnimationTimer, MovementTimer, TemporaryTimer, TransporterTimer};
-use utils::get_level_filename;
+use utils::get_level_path;
 use winit::window::Icon;
 
 pub const INITIAL_HUB_FOCUS: (i16, i16) = (33, 26);
@@ -381,9 +381,16 @@ fn load_level(
         return;
     }
 
-    let Some(level_data) = levels.get(&game_state.current_level) else {
-        return;
-    };
+    let level_data = levels.get(&game_state.current_level).unwrap_or({
+        &Cow::Borrowed(
+            r#"[Player]
+Position=1,1
+
+[Exit]
+Position=2,1
+"#,
+        )
+    });
 
     let mut level = Level::load(level_data);
 
@@ -410,10 +417,7 @@ fn load_level(
         }
     }
 
-    let background_entity = background_query
-        .get_single_mut()
-        .expect("there should be only one background");
-
+    let background_entity = background_query.single_mut();
     let mut background = commands.entity(background_entity);
     background.despawn_descendants();
     background.with_children(|cb| {
@@ -489,7 +493,7 @@ fn save_level(
     let current_level = game_state.current_level;
 
     if *save_to_disk {
-        if let Err(error) = fs::write(get_level_filename(current_level), &content) {
+        if let Err(error) = fs::write(get_level_path(current_level), &content) {
             println!("Could not save level: {error}");
         }
     }

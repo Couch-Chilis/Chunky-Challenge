@@ -33,7 +33,7 @@ pub fn ensure_chunky_dir() -> PathBuf {
     }
 }
 
-pub fn get_level_filename(level_number: u16) -> String {
+pub fn get_level_path(level_number: u16) -> String {
     format!("assets/levels/level{level_number:0>3}")
 }
 
