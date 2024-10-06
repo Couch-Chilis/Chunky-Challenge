@@ -157,6 +157,7 @@ fn main() {
                 .after(load_level)
                 .after(check_for_explosive)
                 .after(check_for_liquid)
+                .after(check_for_transform_on_push)
                 .after(move_objects)
                 .after(on_left_click),
         )
