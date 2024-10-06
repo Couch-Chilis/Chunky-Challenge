@@ -134,6 +134,10 @@ pub fn on_left_click(
     buttons: Res<ButtonInput<MouseButton>>,
     dimensions: Res<Dimensions>,
 ) {
+    if !editor_state.is_open {
+        return;
+    }
+
     if !buttons.pressed(MouseButton::Left) {
         if let SelectionState::Selecting { start, current } = editor_state.selection {
             commands.trigger(ActivateSelection { start, current });
