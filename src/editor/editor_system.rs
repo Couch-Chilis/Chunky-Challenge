@@ -128,7 +128,7 @@ pub fn on_left_click(
     mut commands: Commands,
     selection_query: Query<&mut Transform, With<SelectionOverlay>>,
     background_query: Query<(Entity, &Transform), (With<Background>, Without<SelectionOverlay>)>,
-    objects: Query<(Entity, &Position)>,
+    objects: Query<(Entity, &ObjectType, &Position)>,
     window_query: Query<&Window, With<PrimaryWindow>>,
     editor_state: ResMut<EditorState>,
     buttons: Res<ButtonInput<MouseButton>>,
@@ -246,7 +246,7 @@ fn extend_selection(
 fn spawn_selected_object(
     mut commands: Commands,
     mut editor_state: ResMut<EditorState>,
-    objects: Query<(Entity, &Position)>,
+    objects: Query<(Entity, &ObjectType, &Position)>,
     dimensions: Res<Dimensions>,
     position: Position,
 ) {
@@ -258,8 +258,10 @@ fn spawn_selected_object(
         None => (None, None),
     };
 
-    for (entity, object_position) in &objects {
-        if object_type == Some(ObjectType::Player) || *object_position == position {
+    for (entity, existing_object_type, object_position) in &objects {
+        if object_type == Some(ObjectType::Player) && *existing_object_type == ObjectType::Player
+            || *object_position == position
+        {
             commands.entity(entity).despawn_recursive();
         }
     }

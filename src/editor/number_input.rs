@@ -54,7 +54,7 @@ impl NumberInputBundle {
         cb.spawn(TextBundle {
             text: Text::from_section(text, text_style.clone()),
             style: Style {
-                width: Val::Px(40.),
+                width: Val::Px(60.),
                 ..Default::default()
             },
             ..Default::default()
