@@ -11,6 +11,7 @@ mod gameover;
 mod levels;
 mod menu;
 mod timers;
+mod ui_state;
 mod utils;
 
 use std::{borrow::Cow, collections::BTreeMap, fs};
@@ -18,11 +19,14 @@ use std::{borrow::Cow, collections::BTreeMap, fs};
 use background::{Background, BackgroundPlugin, UpdateBackgroundTransform};
 use bevy::{
     prelude::*,
-    window::{WindowMode, WindowResized, WindowResolution},
+    window::{PrimaryWindow, WindowMode, WindowResized, WindowResolution},
     winit::WinitWindows,
 };
 use constants::*;
-use editor::{on_editor_keyboard_input, on_left_click, EditorPlugin, EditorState, ToggleEditor};
+use editor::{
+    on_editor_keyboard_input, on_editor_mouse_input, EditorPlugin, EditorState, SelectionOverlay,
+    ToggleEditor,
+};
 use fonts::Fonts;
 use game_object::{
     behaviors::*, spawn_object_of_type, CollisionObjectQuery, Direction, Entrance,
@@ -33,6 +37,7 @@ use gameover::{check_for_game_over, setup_gameover};
 use levels::{Dimensions, InitialPositionAndMetadata, Level, Levels};
 use menu::{on_menu_keyboard_input, MenuPlugin, MenuState};
 use timers::{AnimationTimer, MovementTimer, TemporaryTimer, TransporterTimer};
+use ui_state::{UiState, HUB_DEFAULT_ZOOM_FACTOR, LEVEL_DEFAULT_ZOOM_FACTOR};
 use utils::get_level_path;
 use winit::window::Icon;
 
@@ -41,21 +46,6 @@ pub const INITIAL_HUB_FOCUS: (i16, i16) = (33, 26);
 #[derive(Default, Resource)]
 struct PressedTriggers {
     num_pressed_triggers: usize,
-}
-
-#[derive(Resource)]
-struct Zoom {
-    factor: f32,
-}
-
-impl Zoom {
-    fn hub_default() -> Self {
-        Self { factor: 0.32768 }
-    }
-
-    fn level_default() -> Self {
-        Self { factor: 1. }
-    }
 }
 
 #[derive(Event)]
@@ -106,8 +96,8 @@ fn main() {
         .init_resource::<PressedTriggers>()
         .init_resource::<TemporaryTimer>()
         .init_resource::<TransporterTimer>()
+        .init_resource::<UiState>()
         .insert_resource(GameState::load())
-        .insert_resource(Zoom::hub_default())
         .add_event::<ChangeZoom>()
         .add_event::<GameEvent>()
         .add_event::<SaveLevel>()
@@ -116,7 +106,7 @@ fn main() {
         .observe(save_level)
         .observe(spawn_object)
         .add_systems(Startup, (set_window_icon, setup))
-        .add_systems(Update, (on_keyboard_input, on_resize))
+        .add_systems(Update, (on_keyboard_input, on_mouse_input, on_resize))
         .add_systems(
             Update,
             (
@@ -159,7 +149,7 @@ fn main() {
                 .after(check_for_liquid)
                 .after(check_for_transform_on_push)
                 .after(move_objects)
-                .after(on_left_click),
+                .after(on_mouse_input),
         )
         .run();
 }
@@ -210,6 +200,64 @@ fn setup(
     setup_gameover(&mut commands, &fonts);
 }
 
+#[expect(clippy::too_many_arguments, clippy::type_complexity)]
+pub fn on_mouse_input(
+    mut commands: Commands,
+    selection_query: Query<&mut Transform, With<SelectionOverlay>>,
+    background_query: Query<(Entity, &Transform), (With<Background>, Without<SelectionOverlay>)>,
+    objects: Query<(Entity, &ObjectType, &Position)>,
+    window_query: Query<&Window, With<PrimaryWindow>>,
+    editor_state: ResMut<EditorState>,
+    mut ui_state: ResMut<UiState>,
+    buttons: Res<ButtonInput<MouseButton>>,
+    dimensions: Res<Dimensions>,
+    menu_state: Res<MenuState>,
+) {
+    if editor_state.is_open {
+        on_editor_mouse_input(
+            commands,
+            selection_query,
+            background_query,
+            objects,
+            window_query,
+            editor_state,
+            buttons,
+            dimensions,
+        );
+        return;
+    } else if menu_state.is_open {
+        return;
+    }
+
+    if !buttons.pressed(MouseButton::Left) {
+        if ui_state.drag_start.is_some() {
+            ui_state.drag_start = None;
+        }
+        return;
+    }
+
+    let window = window_query.single();
+    let Some(cursor_position) = window.cursor_position() else {
+        return;
+    };
+
+    let zoom_factor = ui_state.zoom_factor;
+    let x = cursor_position.x / (zoom_factor * GRID_SIZE as f32);
+    let y = cursor_position.y / (zoom_factor * GRID_SIZE as f32);
+
+    if let Some((start_x, start_y)) = ui_state.drag_start {
+        let new_camera_offset = (start_x - x, start_y - y);
+        if ui_state.camera_offset != new_camera_offset {
+            ui_state.camera_offset.0 += new_camera_offset.0;
+            ui_state.camera_offset.1 += new_camera_offset.1;
+            commands.trigger(UpdateBackgroundTransform);
+        }
+    }
+
+    ui_state.drag_start = Some((x, y));
+}
+
+#[expect(clippy::too_many_arguments)]
 fn on_keyboard_input(
     mut commands: Commands,
     mut game_events: EventWriter<GameEvent>,
@@ -217,10 +265,11 @@ fn on_keyboard_input(
     player_query: Query<Entity, With<Player>>,
     mut menu_state: ResMut<MenuState>,
     editor_state: ResMut<EditorState>,
+    ui_state: ResMut<UiState>,
     keys: Res<ButtonInput<KeyCode>>,
 ) {
     if editor_state.is_open {
-        on_editor_keyboard_input(commands, game_events, editor_state, keys);
+        on_editor_keyboard_input(commands, game_events, editor_state, ui_state, keys);
         return;
     } else if menu_state.is_open {
         on_menu_keyboard_input(commands, app_exit_events, game_events, menu_state, keys);
@@ -307,6 +356,7 @@ fn on_game_event(
     mut game_state: ResMut<GameState>,
     mut level_events: EventReader<GameEvent>,
     mut player_query: Query<PlayerComponents, With<Player>>,
+    mut ui_state: ResMut<UiState>,
     dimensions: Res<Dimensions>,
 ) {
     for event in level_events.read() {
@@ -322,6 +372,8 @@ fn on_game_event(
                 if let Ok((player, mut position, player_direction, weight)) =
                     player_query.get_single_mut()
                 {
+                    ui_state.camera_offset = Default::default();
+
                     if move_object(
                         &mut position,
                         (*dx, *dy),
@@ -357,22 +409,27 @@ fn on_resize(mut commands: Commands, mut resize_reader: EventReader<WindowResize
     }
 }
 
-fn on_zoom_change(trigger: Trigger<ChangeZoom>, mut commands: Commands, mut zoom: ResMut<Zoom>) {
+fn on_zoom_change(
+    trigger: Trigger<ChangeZoom>,
+    mut commands: Commands,
+    mut ui_state: ResMut<UiState>,
+) {
     let ChangeZoom(factor) = trigger.event();
 
-    if (*factor < 1. && zoom.factor >= 0.2) || (*factor > 1. && zoom.factor <= 5.) {
-        zoom.factor *= factor;
+    let zoom_factor = ui_state.zoom_factor;
+    if (*factor < 1. && zoom_factor >= 0.2) || (*factor > 1. && zoom_factor <= 5.) {
+        ui_state.zoom_factor = zoom_factor * factor;
         commands.trigger(UpdateBackgroundTransform);
     }
 }
 
-#[allow(clippy::too_many_arguments)]
+#[expect(clippy::too_many_arguments)]
 fn load_level(
     mut commands: Commands,
     mut background_query: Query<Entity, With<Background>>,
     mut dimensions: ResMut<Dimensions>,
     mut pressed_triggers: ResMut<PressedTriggers>,
-    mut zoom: ResMut<Zoom>,
+    mut ui_state: ResMut<UiState>,
     assets: Res<GameObjectAssets>,
     fonts: Res<Fonts>,
     game_state: Res<GameState>,
@@ -429,14 +486,14 @@ Position=2,1
 
     *dimensions = level.dimensions;
 
-    *zoom = if game_state.current_level == 0 && game_state.previous_level.is_none() {
-        Zoom::hub_default()
+    ui_state.zoom_factor = if game_state.current_level == 0 && game_state.previous_level.is_none() {
+        HUB_DEFAULT_ZOOM_FACTOR
     } else {
-        Zoom::level_default()
+        LEVEL_DEFAULT_ZOOM_FACTOR
     };
 }
 
-#[allow(clippy::type_complexity)]
+#[expect(clippy::type_complexity)]
 fn save_level(
     trigger: Trigger<SaveLevel>,
     mut game_state: ResMut<GameState>,

@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 use crate::{
     constants::*, editor::EditorState, game_state::GameState, levels::*, load_level,
-    menu::MenuState, on_resize, utils::load_repeating_asset, Player, Position, Zoom,
+    menu::MenuState, on_resize, ui_state::UiState, utils::load_repeating_asset, Player, Position,
     INITIAL_HUB_FOCUS,
 };
 
@@ -70,7 +70,7 @@ fn resize_background(
     commands.trigger(UpdateBackgroundTransform);
 }
 
-#[allow(clippy::too_many_arguments)]
+#[expect(clippy::too_many_arguments)]
 fn update_background_transform(
     _trigger: Trigger<UpdateBackgroundTransform>,
     mut background_query: Query<&mut Transform, With<Background>>,
@@ -80,9 +80,9 @@ fn update_background_transform(
     editor_state: Res<EditorState>,
     game_state: Res<GameState>,
     menu_state: Res<MenuState>,
-    zoom: Res<Zoom>,
+    ui_state: Res<UiState>,
 ) {
-    let (mut focus_x, mut focus_y) = if menu_state.is_open && game_state.current_level == 0 {
+    let (focus_x, focus_y) = if menu_state.is_open && game_state.current_level == 0 {
         (INITIAL_HUB_FOCUS.0, INITIAL_HUB_FOCUS.1)
     } else if let Ok(player_position) = player_query.get_single() {
         (player_position.x, player_position.y)
@@ -98,28 +98,26 @@ fn update_background_transform(
         .expect("there should be only one window");
     let window_size = window.size();
 
-    transform.scale = Vec3::new(zoom.factor, zoom.factor, 1.);
+    let zoom_factor = ui_state.zoom_factor;
+    transform.scale = Vec3::new(zoom_factor, zoom_factor, 1.);
 
     let editor_open = editor_state.is_open;
-    if editor_open {
-        focus_x = focus_x.saturating_add(editor_state.camera_offset.0);
-        focus_y = focus_y.saturating_add(editor_state.camera_offset.1);
-    }
-
     let editor_width = if editor_open { EDITOR_WIDTH as f32 } else { 0. };
-    let level_width = (dimensions.width * GRID_SIZE) as f32 * zoom.factor;
+    let level_width = (dimensions.width * GRID_SIZE) as f32 * zoom_factor;
     let x = if level_width > window_size.x - editor_width {
         let max = 0.5 * (level_width - (window_size.x - editor_width));
-        (zoom.factor * ((-focus_x as f32 + 0.5 * dimensions.width as f32) + 0.5) * GRID_SIZE as f32)
+        (zoom_factor * ((-focus_x as f32 + 0.5 * dimensions.width as f32) + 0.5) * GRID_SIZE as f32)
             .clamp(-max, max)
+            - (zoom_factor * ui_state.camera_offset.0 * GRID_SIZE as f32)
     } else {
         0.
     };
-    let level_height = (dimensions.height * GRID_SIZE) as f32 * zoom.factor;
+    let level_height = (dimensions.height * GRID_SIZE) as f32 * zoom_factor;
     let y = if level_height > window_size.y {
         let max = 0.5 * (level_height - window_size.y);
-        (zoom.factor * ((focus_y as f32 - 0.5 * dimensions.height as f32) - 0.5) * GRID_SIZE as f32)
+        (zoom_factor * ((focus_y as f32 - 0.5 * dimensions.height as f32) - 0.5) * GRID_SIZE as f32)
             .clamp(-max, max)
+            + (zoom_factor * ui_state.camera_offset.1 * GRID_SIZE as f32)
     } else {
         0.
     };

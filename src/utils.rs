@@ -11,8 +11,29 @@ use bevy::{
     },
 };
 
+use crate::{levels::Dimensions, GRID_SIZE};
+
+pub fn level_coords_from_pointer_coords(
+    coords: Vec2,
+    dimensions: Dimensions,
+    transform: &Transform,
+    window_size: Vec2,
+) -> (f32, f32) {
+    let center_x = 0.5 * window_size.x + transform.translation.x;
+    let x = ((coords.x - center_x) / (transform.scale.x * GRID_SIZE as f32)
+        + 0.5 * dimensions.width as f32)
+        + 1.;
+
+    let center_y = 0.5 * window_size.y - transform.translation.y;
+    let y = ((coords.y - center_y) / (transform.scale.y * GRID_SIZE as f32)
+        + 0.5 * dimensions.height as f32)
+        + 1.;
+
+    (x, y)
+}
+
 pub fn ensure_chunky_dir() -> PathBuf {
-    #[allow(deprecated)]
+    #[expect(deprecated)]
     let parent_dir = std::env::home_dir().unwrap_or(PathBuf::from("/tmp"));
 
     let chunky_dir = parent_dir.join(if cfg!(target_os = "ios") {

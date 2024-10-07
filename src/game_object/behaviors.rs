@@ -94,7 +94,7 @@ pub fn check_for_exit(
     }
 }
 
-#[allow(clippy::type_complexity)]
+#[expect(clippy::type_complexity)]
 pub fn check_for_explosive(
     mut commands: Commands,
     explosive_query: Query<(Entity, &Position), With<Explosive>>,
@@ -118,7 +118,7 @@ pub fn check_for_explosive(
     }
 }
 
-#[allow(clippy::type_complexity)]
+#[expect(clippy::type_complexity)]
 pub fn check_for_finished_levels(
     mut commands: Commands,
     mut query: Query<(
@@ -160,7 +160,7 @@ pub fn check_for_finished_levels(
     }
 }
 
-#[allow(clippy::type_complexity)]
+#[expect(clippy::type_complexity)]
 pub fn check_for_key(
     mut commands: Commands,
     mut openable_query: Query<(Entity, &Position, &Openable, Option<&mut TextureAtlas>)>,
@@ -180,7 +180,7 @@ pub fn check_for_key(
     }
 }
 
-#[allow(clippy::type_complexity)]
+#[expect(clippy::type_complexity)]
 pub fn check_for_liquid(
     mut commands: Commands,
     liquid_query: Query<&Position, With<Liquid>>,
@@ -222,7 +222,6 @@ pub fn check_for_liquid(
     }
 }
 
-#[allow(clippy::type_complexity)]
 pub fn check_for_mixables(
     mut commands: Commands,
     moved_mixables_query: Query<(Entity, &Position, &Mixable), Changed<Position>>,
@@ -245,7 +244,6 @@ pub fn check_for_mixables(
     }
 }
 
-#[allow(clippy::type_complexity)]
 pub fn check_for_paint(
     mut commands: Commands,
     moved_paint_query: Query<(Entity, &Position, &Paint), Changed<Position>>,
@@ -265,7 +263,7 @@ pub fn check_for_paint(
     }
 }
 
-#[allow(clippy::type_complexity)]
+#[expect(clippy::type_complexity)]
 pub fn check_for_transform_on_push(
     mut commands: Commands,
     transform_query: Query<
@@ -294,7 +292,7 @@ pub fn check_for_transform_on_push(
     }
 }
 
-#[allow(clippy::type_complexity)]
+#[expect(clippy::type_complexity)]
 pub fn check_for_slippery_and_transporter(
     mut slippery_query: Query<
         (&Position, &mut BlocksMovement),
@@ -378,7 +376,6 @@ pub fn check_for_slippery_and_transporter(
     }
 }
 
-#[allow(clippy::type_complexity)]
 pub fn check_for_teleporter(
     mut objects_query: Query<(Mut<Position>, Option<&Massive>), Without<Teleporter>>,
     teleporters_query: Query<(&Position, &Teleporter)>,
@@ -427,7 +424,7 @@ pub fn check_for_teleporter(
     }
 }
 
-#[allow(clippy::type_complexity)]
+#[expect(clippy::type_complexity)]
 pub fn check_for_triggers(
     mut commands: Commands,
     mut trigger_query: Query<(

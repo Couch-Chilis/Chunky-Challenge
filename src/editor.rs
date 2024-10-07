@@ -25,7 +25,6 @@ impl Plugin for EditorPlugin {
                 on_editor_number_input_interaction,
                 on_object_selector_input,
                 on_selected_object_change,
-                on_left_click,
             ),
         )
         .init_resource::<EditorState>()
@@ -55,7 +54,6 @@ impl Plugin for EditorPlugin {
 #[derive(Clone, Default, Resource)]
 pub struct EditorState {
     pub is_open: bool,
-    pub camera_offset: (i16, i16),
     pub selected_object: Option<Position>,
     pub selected_object_type: Option<EditorObjectType>,
     pub selection: SelectionState,

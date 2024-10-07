@@ -7,6 +7,8 @@ use crate::{
     game_object::{Entrance, GameObjectAssets, ObjectType, Position, Teleporter},
     levels::{Dimensions, InitialPositionAndMetadata},
     timers::{MovementTimer, TemporaryTimer, TransporterTimer},
+    ui_state::UiState,
+    utils::level_coords_from_pointer_coords,
     Background, ChangeZoom, GameEvent, SaveLevel, SpawnObject,
 };
 
@@ -123,8 +125,8 @@ pub fn on_dimensions_changed(
     }
 }
 
-#[allow(clippy::too_many_arguments, clippy::type_complexity)]
-pub fn on_left_click(
+#[expect(clippy::too_many_arguments, clippy::type_complexity)]
+pub fn on_editor_mouse_input(
     mut commands: Commands,
     selection_query: Query<&mut Transform, With<SelectionOverlay>>,
     background_query: Query<(Entity, &Transform), (With<Background>, Without<SelectionOverlay>)>,
@@ -159,17 +161,9 @@ pub fn on_left_click(
 
     let (background, transform) = background_query.single();
 
-    let center_x = 0.5 * window_size.x + transform.translation.x;
-    let x = ((cursor_position.x - center_x) / (transform.scale.x * GRID_SIZE as f32)
-        + 0.5 * dimensions.width as f32) as i16
-        + 1;
-
-    let center_y = 0.5 * window_size.y - transform.translation.y;
-    let y = ((cursor_position.y - center_y) / (transform.scale.y * GRID_SIZE as f32)
-        + 0.5 * dimensions.height as f32) as i16
-        + 1;
-
-    let position = Position { x, y };
+    let (x, y) =
+        level_coords_from_pointer_coords(cursor_position, *dimensions, transform, window_size);
+    let position: Position = (x as i16, y as i16).into();
 
     if matches!(
         editor_state.selection,
@@ -296,6 +290,7 @@ pub fn on_editor_keyboard_input(
     mut commands: Commands,
     mut events: EventWriter<GameEvent>,
     mut editor_state: ResMut<EditorState>,
+    mut ui_state: ResMut<UiState>,
     keys: Res<ButtonInput<KeyCode>>,
 ) {
     for key in keys.get_just_pressed() {
@@ -305,7 +300,7 @@ pub fn on_editor_keyboard_input(
                 if matches!(editor_state.selection, SelectionState::Active { .. }) {
                     commands.trigger(MoveAllObjects { dx: 0, dy: -1 });
                 } else {
-                    editor_state.camera_offset.1 -= 1;
+                    ui_state.camera_offset.1 -= 1.;
                     commands.trigger(UpdateBackgroundTransform);
                 }
             }
@@ -313,7 +308,7 @@ pub fn on_editor_keyboard_input(
                 if matches!(editor_state.selection, SelectionState::Active { .. }) {
                     commands.trigger(MoveAllObjects { dx: 1, dy: 0 });
                 } else {
-                    editor_state.camera_offset.0 += 1;
+                    ui_state.camera_offset.0 += 1.;
                     commands.trigger(UpdateBackgroundTransform);
                 }
             }
@@ -321,7 +316,7 @@ pub fn on_editor_keyboard_input(
                 if matches!(editor_state.selection, SelectionState::Active { .. }) {
                     commands.trigger(MoveAllObjects { dx: 0, dy: 1 });
                 } else {
-                    editor_state.camera_offset.1 += 1;
+                    ui_state.camera_offset.1 += 1.;
                     commands.trigger(UpdateBackgroundTransform);
                 }
             }
@@ -329,7 +324,7 @@ pub fn on_editor_keyboard_input(
                 if matches!(editor_state.selection, SelectionState::Active { .. }) {
                     commands.trigger(MoveAllObjects { dx: -1, dy: 0 });
                 } else {
-                    editor_state.camera_offset.0 -= 1;
+                    ui_state.camera_offset.0 -= 1.;
                     commands.trigger(UpdateBackgroundTransform);
                 }
             }
@@ -410,7 +405,7 @@ pub fn on_deselect_object(
     identifier_input_query.single_mut().display = Display::None;
 }
 
-#[allow(clippy::too_many_arguments)]
+#[expect(clippy::too_many_arguments)]
 pub fn on_toggle_editor(
     _trigger: Trigger<ToggleEditor>,
     mut commands: Commands,

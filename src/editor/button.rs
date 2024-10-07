@@ -17,7 +17,7 @@ pub struct EditorButtonBundle {
 }
 
 impl EditorButtonBundle {
-    #[allow(clippy::new_ret_no_self)]
+    #[expect(clippy::new_ret_no_self)]
     pub fn new(marker: impl Bundle) -> impl Bundle {
         (
             marker,
