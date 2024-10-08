@@ -188,8 +188,11 @@ impl Level {
         for (object_type, mut positions) in self.objects {
             writeln!(content, "\n\n[{object_type}]").expect("writing failed");
 
-            positions.sort_unstable_by(|a, b| match a.direction.cmp(&b.direction) {
-                Ordering::Equal => a.position.cmp(&b.position),
+            positions.sort_unstable_by(|a, b| match a.level.cmp(&b.level) {
+                Ordering::Equal => match a.direction.cmp(&b.direction) {
+                    Ordering::Equal => a.position.cmp(&b.position),
+                    ordering => ordering,
+                },
                 ordering => ordering,
             });
 
