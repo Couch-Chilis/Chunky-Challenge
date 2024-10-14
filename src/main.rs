@@ -141,15 +141,20 @@ fn main() {
                 check_for_paint,
                 check_for_teleporter,
                 on_player_moved,
-                position_entities,
-                update_entity_directions,
             )
                 .after(load_level)
-                .after(check_for_explosive)
-                .after(check_for_liquid)
-                .after(check_for_transform_on_push)
                 .after(move_objects)
                 .after(on_mouse_input),
+        )
+        .add_systems(
+            Update,
+            (position_entities, update_entity_directions)
+                .after(check_for_explosive)
+                .after(check_for_liquid)
+                .after(check_for_mixables)
+                .after(check_for_paint)
+                .after(check_for_teleporter)
+                .after(check_for_transform_on_push),
         )
         .run();
 }
