@@ -4,8 +4,8 @@ use super::{
     assets::GameObjectAssets,
     components::{Exit, Liquid, Massive, Player, Position, Pushable},
     Animatable, BlocksMovement, BlocksPushes, Deadly, Direction, Entrance, Explosive, Floatable,
-    Key, Mixable, Movable, ObjectType, Openable, Paint, Paintable, Slippery, Teleporter,
-    TransformOnPush, Transporter, Trigger, Volatile, Weight,
+    Key, Movable, ObjectType, Openable, Paint, Paintable, Slippery, Teleporter, TransformOnPush,
+    Transporter, Trigger, Volatile, Weight,
 };
 
 #[derive(Bundle)]
@@ -40,7 +40,6 @@ impl BlueBlockBundle {
 #[derive(Bundle)]
 pub struct BluePaintBundle {
     object_type: ObjectType,
-    mixable: Mixable,
     paint: Paint,
     position: Position,
     pushable: Pushable,
@@ -52,7 +51,6 @@ impl BluePaintBundle {
     pub fn spawn(assets: &GameObjectAssets, position: Position) -> Self {
         Self {
             object_type: ObjectType::BluePaint,
-            mixable: Mixable(ObjectType::PurplePaint),
             paint: Paint(ObjectType::BlueBlock),
             position,
             pushable: Pushable,
@@ -453,7 +451,6 @@ impl PurpleBlockBundle {
 #[derive(Bundle)]
 pub struct PurplePaintBundle {
     object_type: ObjectType,
-    mixable: Mixable,
     paint: Paint,
     position: Position,
     pushable: Pushable,
@@ -465,7 +462,6 @@ impl PurplePaintBundle {
     pub fn spawn(assets: &GameObjectAssets, position: Position) -> Self {
         Self {
             object_type: ObjectType::PurplePaint,
-            mixable: Mixable(ObjectType::PurplePaint),
             paint: Paint(ObjectType::PurpleBlock),
             position,
             pushable: Pushable,
@@ -534,7 +530,6 @@ impl RedBlockBundle {
 #[derive(Bundle)]
 pub struct RedPaintBundle {
     object_type: ObjectType,
-    mixable: Mixable,
     paint: Paint,
     position: Position,
     pushable: Pushable,
@@ -546,7 +541,6 @@ impl RedPaintBundle {
     pub fn spawn(assets: &GameObjectAssets, position: Position) -> Self {
         Self {
             object_type: ObjectType::RedPaint,
-            mixable: Mixable(ObjectType::PurplePaint),
             paint: Paint(ObjectType::RedBlock),
             position,
             pushable: Pushable,

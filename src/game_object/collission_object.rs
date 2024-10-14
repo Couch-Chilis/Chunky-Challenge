@@ -1,13 +1,13 @@
 use bevy::prelude::*;
 
-use super::components::*;
+use super::{components::*, ObjectType};
 
 pub type CollisionObjectQuery<'a> = (
     Option<Mut<'a, BlocksMovement>>,
     Option<&'a BlocksPushes>,
     Option<&'a Key>,
     Option<&'a Massive>,
-    Option<&'a Mixable>,
+    &'a ObjectType,
     Option<&'a Openable>,
     Option<&'a Paint>,
     Option<&'a Paintable>,
@@ -21,7 +21,7 @@ pub struct CollisionObject<'a> {
     blocks_pushes: Option<&'a BlocksPushes>,
     key: Option<&'a Key>,
     massive: Option<&'a Massive>,
-    pub(super) mixable: Option<&'a Mixable>,
+    object_type: &'a ObjectType,
     openable: Option<&'a Openable>,
     paint: Option<&'a Paint>,
     paintable: Option<&'a Paintable>,
@@ -37,7 +37,7 @@ impl<'a> From<CollisionObjectQuery<'a>> for CollisionObject<'a> {
             blocks_pushes,
             key,
             massive,
-            mixable,
+            object_type,
             openable,
             paint,
             paintable,
@@ -51,7 +51,7 @@ impl<'a> From<CollisionObjectQuery<'a>> for CollisionObject<'a> {
             blocks_pushes,
             key,
             massive,
-            mixable,
+            object_type,
             openable,
             paint,
             paintable,
@@ -69,8 +69,8 @@ impl<'a> CollisionObject<'a> {
             .is_some_and(|blocks| **blocks == BlocksMovement::Enabled)
     }
 
-    pub fn can_mix_with(&self, other: &Mixable) -> bool {
-        self.mixable.is_some_and(|mixable| mixable == other)
+    pub fn can_mix_with(&self, other: ObjectType) -> bool {
+        self.object_type.mix_with(other).is_some()
     }
 
     pub fn can_open_with_key(&self) -> bool {
@@ -103,6 +103,10 @@ impl<'a> CollisionObject<'a> {
 
     pub fn is_pushable(&self) -> bool {
         self.pushable.is_some()
+    }
+
+    pub fn object_type(&self) -> ObjectType {
+        *self.object_type
     }
 
     pub fn weight(&self) -> Weight {

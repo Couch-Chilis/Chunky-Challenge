@@ -111,6 +111,26 @@ impl FromStr for ObjectType {
     }
 }
 
+impl ObjectType {
+    /// Returns the object type this turns into when mixed with another.
+    ///
+    /// Only used for mixing of paint.
+    pub fn mix_with(self, other: ObjectType) -> Option<Self> {
+        match (self, other) {
+            (Self::BluePaint, Self::BluePaint) => Some(Self::BluePaint),
+            (Self::BluePaint, Self::PurplePaint) => Some(Self::PurplePaint),
+            (Self::BluePaint, Self::RedPaint) => Some(Self::PurplePaint),
+            (Self::PurplePaint, Self::BluePaint) => Some(Self::PurplePaint),
+            (Self::PurplePaint, Self::PurplePaint) => Some(Self::PurplePaint),
+            (Self::PurplePaint, Self::RedPaint) => Some(Self::PurplePaint),
+            (Self::RedPaint, Self::BluePaint) => Some(Self::PurplePaint),
+            (Self::RedPaint, Self::PurplePaint) => Some(Self::PurplePaint),
+            (Self::RedPaint, Self::RedPaint) => Some(Self::RedPaint),
+            _ => None,
+        }
+    }
+}
+
 pub fn spawn_object_of_type<'a>(
     cb: &'a mut ChildBuilder,
     assets: &GameObjectAssets,

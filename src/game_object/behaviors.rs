@@ -222,34 +222,13 @@ pub fn check_for_liquid(
     }
 }
 
-pub fn check_for_mixables(
-    mut commands: Commands,
-    moved_mixables_query: Query<(Entity, &Position, &Mixable), Changed<Position>>,
-    all_mixables_query: Query<(Entity, &Position, &Mixable)>,
-) {
-    for (moved_mixable_entity, mixable_position, mixable) in &moved_mixables_query {
-        for (other_mixable_entity, other_position, other_mixable) in &all_mixables_query {
-            if moved_mixable_entity != other_mixable_entity
-                && mixable_position == other_position
-                && mixable == other_mixable
-            {
-                commands.entity(moved_mixable_entity).despawn();
-                commands.entity(other_mixable_entity).despawn();
-                commands.trigger(SpawnObject {
-                    object_type: mixable.0,
-                    position: other_position.into(),
-                });
-            }
-        }
-    }
-}
-
 pub fn check_for_paint(
     mut commands: Commands,
-    moved_paint_query: Query<(Entity, &Position, &Paint), Changed<Position>>,
+    moved_paint_query: Query<(Entity, &ObjectType, &Position, &Paint), Changed<Position>>,
+    all_paint_query: Query<(Entity, &ObjectType, &Position), With<Paint>>,
     paintable_query: Query<(Entity, &Position), With<Paintable>>,
 ) {
-    for (paint_entity, paint_position, paint) in &moved_paint_query {
+    for (paint_entity, paint_type, paint_position, paint) in &moved_paint_query {
         for (paintable_entity, paintable_position) in &paintable_query {
             if paint_position == paintable_position {
                 commands.entity(paint_entity).despawn();
@@ -258,6 +237,19 @@ pub fn check_for_paint(
                     object_type: paint.0,
                     position: paintable_position.into(),
                 });
+            }
+        }
+
+        for (other_entity, other_type, other_position) in &all_paint_query {
+            if paint_entity != other_entity && paint_position == other_position {
+                if let Some(mixed_type) = paint_type.mix_with(*other_type) {
+                    commands.entity(paint_entity).despawn();
+                    commands.entity(other_entity).despawn();
+                    commands.trigger(SpawnObject {
+                        object_type: mixed_type,
+                        position: paint_position.into(),
+                    });
+                }
             }
         }
     }
@@ -581,7 +573,7 @@ pub fn move_object<'a>(
         (position.x - new_x).abs() + (position.y - new_y).abs()
     });
 
-    let can_mix_with = |x: i16, y: i16, other: &Mixable| -> bool {
+    let can_mix_with = |x: i16, y: i16, other: ObjectType| -> bool {
         collision_objects
             .iter()
             .any(|object| object.has_position((x, y).into()) && object.can_mix_with(other))
@@ -615,10 +607,8 @@ pub fn move_object<'a>(
         if collision_object.has_position((new_x, new_y).into()) {
             let can_push_to_or_mix_or_open_or_paint = |x: i16, y: i16| -> bool {
                 can_push_to(x, y)
+                    || can_mix_with(x, y, collision_object.object_type())
                     || collision_object.is_key() && can_open_with_key(x, y)
-                    || collision_object
-                        .mixable
-                        .is_some_and(|mixable| can_mix_with(x, y, mixable))
                     || collision_object.is_paint() && can_paint(x, y)
             };
 

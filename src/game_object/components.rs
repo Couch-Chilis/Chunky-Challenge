@@ -181,13 +181,6 @@ pub struct Liquid;
 #[derive(Component)]
 pub struct Massive;
 
-/// Mixable allows for mixing different kinds of [Paint].
-///
-/// When two mixable entities with the same [ObjectType] are pushed onto one
-/// another, they transform into a new [Paint] object for that object type.
-#[derive(Component, Eq, PartialEq)]
-pub struct Mixable(pub ObjectType);
-
 /// Movable entities move by themselves.
 ///
 /// They face a given [Direction], while the [Movable] variant decides what will

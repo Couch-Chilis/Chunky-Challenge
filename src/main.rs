@@ -137,7 +137,6 @@ fn main() {
             (
                 check_for_finished_levels,
                 check_for_key,
-                check_for_mixables,
                 check_for_paint,
                 check_for_teleporter,
                 on_player_moved,
@@ -151,7 +150,6 @@ fn main() {
             (position_entities, update_entity_directions)
                 .after(check_for_explosive)
                 .after(check_for_liquid)
-                .after(check_for_mixables)
                 .after(check_for_paint)
                 .after(check_for_teleporter)
                 .after(check_for_transform_on_push),
