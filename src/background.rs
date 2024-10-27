@@ -1,9 +1,8 @@
 use bevy::prelude::*;
 
 use crate::{
-    constants::*, editor::EditorState, game_state::GameState, levels::*, load_level,
-    menu::MenuState, on_resize, ui_state::UiState, utils::load_repeating_asset, Player, Position,
-    INITIAL_HUB_FOCUS,
+    constants::*, editor::EditorState, levels::*, load_level, menu::MenuState, on_resize,
+    ui_state::UiState, utils::load_repeating_asset, Player, Position, INITIAL_HUB_FOCUS,
 };
 
 const BACKGROUND_ASSET: &[u8] = include_bytes!("../assets/sprites/background.png");
@@ -78,11 +77,10 @@ fn update_background_transform(
     window_query: Query<&Window>,
     dimensions: Res<Dimensions>,
     editor_state: Res<EditorState>,
-    game_state: Res<GameState>,
     menu_state: Res<MenuState>,
     ui_state: Res<UiState>,
 ) {
-    let (focus_x, focus_y) = if menu_state.is_open && game_state.current_level == 0 {
+    let (focus_x, focus_y) = if menu_state.is_in_hub_menu() {
         (INITIAL_HUB_FOCUS.0, INITIAL_HUB_FOCUS.1)
     } else if let Ok(player_position) = player_query.get_single() {
         (player_position.x, player_position.y)

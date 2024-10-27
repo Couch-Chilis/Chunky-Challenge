@@ -35,7 +35,7 @@ use game_object::{
 use game_state::GameState;
 use gameover::{check_for_game_over, setup_gameover};
 use levels::{Dimensions, InitialPositionAndMetadata, Level, Levels};
-use menu::{on_menu_keyboard_input, MenuPlugin, MenuState};
+use menu::{on_menu_keyboard_input, MenuKind, MenuPlugin, MenuState};
 use timers::{AnimationTimer, MovementTimer, TemporaryTimer, TransporterTimer};
 use ui_state::{UiState, HUB_DEFAULT_ZOOM_FACTOR, LEVEL_DEFAULT_ZOOM_FACTOR};
 use utils::get_level_path;
@@ -228,7 +228,7 @@ pub fn on_mouse_input(
             dimensions,
         );
         return;
-    } else if menu_state.is_open {
+    } else if menu_state.is_open() {
         return;
     }
 
@@ -269,12 +269,13 @@ fn on_keyboard_input(
     mut menu_state: ResMut<MenuState>,
     editor_state: ResMut<EditorState>,
     ui_state: ResMut<UiState>,
+    game_state: Res<GameState>,
     keys: Res<ButtonInput<KeyCode>>,
 ) {
     if editor_state.is_open {
         on_editor_keyboard_input(commands, game_events, editor_state, ui_state, keys);
         return;
-    } else if menu_state.is_open {
+    } else if menu_state.is_open() {
         on_menu_keyboard_input(commands, app_exit_events, game_events, menu_state, keys);
         return;
     }
@@ -316,7 +317,11 @@ fn on_keyboard_input(
                 game_events.send(GameEvent::LoadRelativeLevel(0));
             }
             Escape => {
-                menu_state.is_open = true;
+                menu_state.set_open(if game_state.is_in_hub() {
+                    MenuKind::Hub
+                } else {
+                    MenuKind::Level
+                });
             }
 
             _ => continue,
@@ -489,7 +494,7 @@ Position=2,1
 
     *dimensions = level.dimensions;
 
-    ui_state.zoom_factor = if game_state.current_level == 0 && game_state.previous_level.is_none() {
+    ui_state.zoom_factor = if game_state.is_in_hub() && game_state.previous_level.is_none() {
         HUB_DEFAULT_ZOOM_FACTOR
     } else {
         LEVEL_DEFAULT_ZOOM_FACTOR

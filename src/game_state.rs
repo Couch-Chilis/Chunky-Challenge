@@ -28,6 +28,10 @@ impl GameState {
             .unwrap_or_default()
     }
 
+    pub fn is_in_hub(&self) -> bool {
+        self.current_level == 0
+    }
+
     pub fn set_current_level(&mut self, level: u16) {
         self.previous_level = Some(self.current_level);
         self.current_level = level;
