@@ -588,7 +588,7 @@ pub struct TeleporterBundle {
 impl TeleporterBundle {
     pub fn spawn(assets: &GameObjectAssets, position: Position, identifier: u16) -> Self {
         Self {
-            object_type: ObjectType::Transporter,
+            object_type: ObjectType::Teleporter,
             position,
             sprite: SpriteBundle {
                 texture: assets.teleporter.clone(),
