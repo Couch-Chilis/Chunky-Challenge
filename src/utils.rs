@@ -1,14 +1,11 @@
 use std::{fs, path::PathBuf};
 
 use bevy::{
-    prelude::*,
-    render::{
-        render_asset::RenderAssetUsages,
-        texture::{
-            CompressedImageFormats, ImageAddressMode, ImageSampler, ImageSamplerDescriptor,
-            ImageType,
-        },
+    image::{
+        CompressedImageFormats, ImageAddressMode, ImageSampler, ImageSamplerDescriptor, ImageType,
     },
+    prelude::*,
+    render::render_asset::RenderAssetUsages,
 };
 
 use crate::{levels::Dimensions, GRID_SIZE};

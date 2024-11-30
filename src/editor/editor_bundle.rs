@@ -2,16 +2,9 @@ use bevy::prelude::*;
 
 use crate::{constants::*, fonts::Fonts, game_object::GameObjectAssets, levels::Dimensions};
 
-use super::{
-    button::{Button, EditorButtonBundle},
-    number_input::NumberInputBundle,
-    ObjectSelectorBundle,
-};
+use super::{editor_button::EditorButton, number_input::NumberInput, ObjectSelector};
 
 const BORDER_WIDTH: f32 = 2.;
-
-#[derive(Component)]
-pub struct Editor;
 
 #[derive(Clone, Component, Copy, Eq, PartialEq)]
 pub enum Input {
@@ -30,36 +23,32 @@ pub struct LevelInput;
 #[derive(Component)]
 pub struct SelectionOverlay;
 
-#[derive(Bundle)]
-pub struct EditorBundle {
-    background: NodeBundle,
-    editor: Editor,
-}
+#[derive(Component)]
+#[require(Node)]
+pub struct Editor;
 
-impl EditorBundle {
-    pub fn new() -> Self {
-        Self {
-            background: NodeBundle {
-                style: Style {
-                    width: Val::Px(EDITOR_WIDTH as f32 - BORDER_WIDTH),
-                    height: Val::Percent(100.),
-                    border: UiRect::left(Val::Px(BORDER_WIDTH)),
-                    padding: UiRect::all(Val::Px(EDITOR_PADDING as f32)),
-                    flex_direction: FlexDirection::Column,
-                    align_items: AlignItems::Center,
-                    justify_content: JustifyContent::Start,
-                    right: Val::Px(0.),
-                    position_type: PositionType::Absolute,
-                    row_gap: Val::Px(EDITOR_PADDING as f32),
-                    ..Default::default()
-                },
-                background_color: GRAY_BACKGROUND.into(),
-                border_color: RED.into(),
-                z_index: ZIndex::Global(100),
-                ..Default::default()
+impl Editor {
+    #[expect(clippy::new_ret_no_self)]
+    pub fn new() -> impl Bundle {
+        (
+            Editor,
+            BackgroundColor(GRAY_BACKGROUND),
+            BorderColor(RED),
+            GlobalZIndex(100),
+            Node {
+                width: Val::Px(EDITOR_WIDTH as f32 - BORDER_WIDTH),
+                height: Val::Percent(100.),
+                border: UiRect::left(Val::Px(BORDER_WIDTH)),
+                padding: UiRect::all(Val::Px(EDITOR_PADDING as f32)),
+                flex_direction: FlexDirection::Column,
+                align_items: AlignItems::Center,
+                justify_content: JustifyContent::Start,
+                right: Val::Px(0.),
+                position_type: PositionType::Absolute,
+                row_gap: Val::Px(EDITOR_PADDING as f32),
+                ..default()
             },
-            editor: Editor,
-        }
+        )
     }
 
     pub fn populate(
@@ -68,29 +57,29 @@ impl EditorBundle {
         dimensions: &Dimensions,
         fonts: &Fonts,
     ) {
-        cb.spawn(NumberInputBundle::new()).with_children(|cb| {
-            NumberInputBundle::populate(cb, Input::Width, "Width:", dimensions.width, fonts)
+        cb.spawn(NumberInput::new()).with_children(|cb| {
+            NumberInput::populate(cb, Input::Width, "Width:", dimensions.width, fonts)
         });
 
-        cb.spawn(NumberInputBundle::new()).with_children(|cb| {
-            NumberInputBundle::populate(cb, Input::Height, "Height:", dimensions.height, fonts)
+        cb.spawn(NumberInput::new()).with_children(|cb| {
+            NumberInput::populate(cb, Input::Height, "Height:", dimensions.height, fonts)
         });
 
-        cb.spawn(ObjectSelectorBundle::new())
-            .with_children(|cb| ObjectSelectorBundle::populate(cb, assets));
+        cb.spawn(ObjectSelector::new())
+            .with_children(|cb| ObjectSelector::populate(cb, assets));
 
-        cb.spawn(EditorButtonBundle::new(Button::Save))
-            .with_children(|cb| EditorButtonBundle::populate(cb, Button::Save, "Save", fonts));
+        cb.spawn(EditorButton::new(EditorButton::Save))
+            .with_children(|cb| EditorButton::populate(cb, EditorButton::Save, "Save", fonts));
 
-        cb.spawn(EditorButtonBundle::new(Button::Select))
-            .with_children(|cb| EditorButtonBundle::populate(cb, Button::Select, "Select", fonts));
+        cb.spawn(EditorButton::new(EditorButton::Select))
+            .with_children(|cb| EditorButton::populate(cb, EditorButton::Select, "Select", fonts));
 
-        cb.spawn(NumberInputBundle::hidden(LevelInput))
-            .with_children(|cb| NumberInputBundle::populate(cb, Input::Level, "Level:", 0, fonts));
+        cb.spawn(NumberInput::hidden(LevelInput))
+            .with_children(|cb| NumberInput::populate(cb, Input::Level, "Level:", 0, fonts));
 
-        cb.spawn(NumberInputBundle::hidden(IdentifierInput))
+        cb.spawn(NumberInput::hidden(IdentifierInput))
             .with_children(|cb| {
-                NumberInputBundle::populate(cb, Input::Identifier, "Teleporter:", 0, fonts)
+                NumberInput::populate(cb, Input::Identifier, "Teleporter:", 0, fonts)
             });
     }
 }

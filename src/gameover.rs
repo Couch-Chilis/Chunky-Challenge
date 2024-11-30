@@ -9,44 +9,35 @@ pub fn setup_gameover(commands: &mut Commands, fonts: &Fonts) {
     commands
         .spawn((
             GameOver,
-            NodeBundle {
-                style: Style {
-                    display: Display::None,
-                    width: Val::Px(300.),
-                    height: Val::Px(80.),
-                    border: UiRect::all(Val::Px(2.)),
-                    margin: UiRect::all(Val::Auto),
-                    position_type: PositionType::Absolute,
-                    ..Default::default()
-                },
-                background_color: GRAY_BACKGROUND.into(),
-                border_color: RED.into(),
-                z_index: ZIndex::Global(100),
-                ..Default::default()
+            BackgroundColor(GRAY_BACKGROUND),
+            BorderColor(RED),
+            GlobalZIndex(100),
+            Node {
+                display: Display::None,
+                width: Val::Px(300.),
+                height: Val::Px(80.),
+                border: UiRect::all(Val::Px(2.)),
+                margin: UiRect::all(Val::Auto),
+                position_type: PositionType::Absolute,
+                ..default()
             },
         ))
         .with_children(|cb| {
-            cb.spawn(TextBundle {
-                text: Text::from_section(
-                    "Game Over\n\nPress Enter to try again",
-                    TextStyle {
-                        font: fonts.poppins_light.clone(),
-                        font_size: 20.,
-                        color: WHITE,
-                    },
-                )
-                .with_justify(JustifyText::Center),
-                style: Style {
+            cb.spawn((
+                Text::new("Game Over\n\nPress Enter to try again"),
+                TextColor(WHITE),
+                TextFont::from_font(fonts.poppins_light.clone()).with_font_size(20.),
+                TextLayout::new_with_justify(JustifyText::Center),
+                Node {
                     margin: UiRect::all(Val::Auto),
-                    ..Default::default()
+                    ..default()
                 },
-                ..Default::default()
-            });
+            ));
         });
 }
 
 pub fn check_for_game_over(
-    mut game_over_query: Query<&mut Style, With<GameOver>>,
+    mut game_over_query: Query<&mut Node, With<GameOver>>,
     player_query: Query<Entity, With<Player>>,
     editor: Res<EditorState>,
 ) {

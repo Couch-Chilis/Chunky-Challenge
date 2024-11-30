@@ -102,9 +102,9 @@ fn main() {
         .add_event::<GameEvent>()
         .add_event::<SaveLevel>()
         .add_event::<SpawnObject>()
-        .observe(on_zoom_change)
-        .observe(save_level)
-        .observe(spawn_object)
+        .add_observer(on_zoom_change)
+        .add_observer(save_level)
+        .add_observer(spawn_object)
         .add_systems(Startup, (set_window_icon, setup))
         .add_systems(Update, (on_keyboard_input, on_mouse_input, on_resize))
         .add_systems(
@@ -159,7 +159,7 @@ fn main() {
 
 fn get_initial_window_mode() -> WindowMode {
     if cfg!(target_os = "ios") || std::env::var_os("SteamTenfoot").is_some() {
-        WindowMode::BorderlessFullscreen
+        WindowMode::BorderlessFullscreen(MonitorSelection::Current)
     } else {
         WindowMode::Windowed
     }
@@ -198,7 +198,7 @@ fn setup(
         .unwrap(),
     );
 
-    commands.spawn(Camera2dBundle::default());
+    commands.spawn(Camera2d);
 
     setup_gameover(&mut commands, &fonts);
 }
@@ -345,9 +345,11 @@ fn position_entities(
     }
 }
 
-fn update_entity_directions(mut query: Query<(&Direction, &mut TextureAtlas), Changed<Direction>>) {
-    for (direction, mut atlas) in &mut query {
-        atlas.index = *direction as usize;
+fn update_entity_directions(mut query: Query<(&Direction, &mut Sprite), Changed<Direction>>) {
+    for (direction, mut sprite) in &mut query {
+        if let Some(atlas) = sprite.texture_atlas.as_mut() {
+            atlas.index = *direction as usize;
+        }
     }
 }
 
@@ -544,9 +546,9 @@ fn save_level(
         }
     }
 
-    if !objects
+    if objects
         .get(&ObjectType::Player)
-        .is_some_and(|player_locations| player_locations.len() == 1)
+        .is_none_or(|player_locations| player_locations.len() != 1)
     {
         return; // Only save levels with exactly one player.
     }

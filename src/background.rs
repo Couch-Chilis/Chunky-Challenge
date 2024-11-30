@@ -21,7 +21,7 @@ impl Plugin for BackgroundPlugin {
             .init_resource::<BackgroundAsset>()
             .add_event::<UpdateBackgroundTransform>()
             .add_systems(Update, resize_background.after(load_level).after(on_resize))
-            .observe(update_background_transform);
+            .add_observer(update_background_transform);
     }
 }
 
@@ -37,13 +37,7 @@ fn setup_background(
 ) {
     asset.background = image_assets.add(load_repeating_asset(BACKGROUND_ASSET));
 
-    commands.spawn((
-        Background,
-        SpriteBundle {
-            texture: asset.background.clone(),
-            ..Default::default()
-        },
-    ));
+    commands.spawn((Background, Sprite::from_image(asset.background.clone())));
 }
 
 fn resize_background(

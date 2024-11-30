@@ -8,685 +8,429 @@ use super::{
     Transporter, Trigger, Volatile, Weight,
 };
 
-#[derive(Bundle)]
-pub struct BlueBlockBundle {
-    object_type: ObjectType,
-    massive: Massive,
-    paintable: Paintable,
-    position: Position,
-    pushable: Pushable,
-    sprite: SpriteBundle,
-    weight: Weight,
-}
+pub struct BlueBlock;
 
-impl BlueBlockBundle {
-    pub fn spawn(assets: &GameObjectAssets, position: Position) -> Self {
-        Self {
-            object_type: ObjectType::BlueBlock,
-            massive: Massive,
-            paintable: Paintable,
+impl BlueBlock {
+    pub fn spawn(assets: &GameObjectAssets, position: Position) -> impl Bundle {
+        (
+            ObjectType::BlueBlock,
+            Massive,
+            Paintable,
             position,
-            pushable: Pushable,
-            sprite: SpriteBundle {
-                texture: assets.blue_block.clone(),
-                transform: Transform::from_translation(Vec3::new(0., 0., 3.)),
-                ..Default::default()
-            },
-            weight: Weight::Heavy,
-        }
+            Pushable,
+            Sprite::from_image(assets.blue_block.clone()),
+            Transform::from_translation(Vec3::new(0., 0., 3.)),
+            Weight::Heavy,
+        )
     }
 }
 
-#[derive(Bundle)]
-pub struct BluePaintBundle {
-    object_type: ObjectType,
-    paint: Paint,
-    position: Position,
-    pushable: Pushable,
-    sprite: SpriteBundle,
-    weight: Weight,
-}
+pub struct BluePaint;
 
-impl BluePaintBundle {
-    pub fn spawn(assets: &GameObjectAssets, position: Position) -> Self {
-        Self {
-            object_type: ObjectType::BluePaint,
-            paint: Paint(ObjectType::BlueBlock),
+impl BluePaint {
+    pub fn spawn(assets: &GameObjectAssets, position: Position) -> impl Bundle {
+        (
+            ObjectType::BluePaint,
+            Paint(ObjectType::BlueBlock),
             position,
-            pushable: Pushable,
-            sprite: SpriteBundle {
-                texture: assets.blue_paint.clone(),
-                transform: Transform::from_translation(Vec3::new(0., 0., 2.)),
-                ..Default::default()
-            },
-            weight: Weight::Light,
-        }
+            Pushable,
+            Sprite::from_image(assets.blue_paint.clone()),
+            Transform::from_translation(Vec3::new(0., 0., 2.)),
+            Weight::Light,
+        )
     }
 }
 
-#[derive(Bundle)]
-pub struct BouncingBallBundle {
-    object_type: ObjectType,
-    blocks_pushes: BlocksPushes,
-    deadly: Deadly,
-    direction: Direction,
-    movable: Movable,
-    position: Position,
-    sprite: SpriteBundle,
-    weight: Weight,
-}
+pub struct BouncingBall;
 
-impl BouncingBallBundle {
-    pub fn spawn(assets: &GameObjectAssets, position: Position, direction: Direction) -> Self {
-        Self {
-            object_type: ObjectType::BouncingBall,
-            blocks_pushes: BlocksPushes,
-            deadly: Deadly,
+impl BouncingBall {
+    pub fn spawn(
+        assets: &GameObjectAssets,
+        position: Position,
+        direction: Direction,
+    ) -> impl Bundle {
+        (
+            ObjectType::BouncingBall,
+            BlocksPushes,
+            Deadly,
             direction,
-            movable: Movable::Bounce,
+            Movable::Bounce,
             position,
-            sprite: SpriteBundle {
-                texture: assets.bouncing_ball.clone(),
-                transform: Transform::from_translation(Vec3::new(0., 0., 4.)),
-                ..Default::default()
-            },
-            weight: Weight::Light,
-        }
+            Sprite::from_image(assets.bouncing_ball.clone()),
+            Transform::from_translation(Vec3::new(0., 0., 4.)),
+            Weight::Light,
+        )
     }
 }
 
-#[derive(Bundle)]
-pub struct ButtonBundle {
-    object_type: ObjectType,
-    position: Position,
-    sprite: SpriteBundle,
-    trigger: Trigger,
-}
+pub struct Button;
 
-impl ButtonBundle {
-    pub fn spawn(assets: &GameObjectAssets, position: Position) -> Self {
-        Self {
-            object_type: ObjectType::Button,
+impl Button {
+    pub fn spawn(assets: &GameObjectAssets, position: Position) -> impl Bundle {
+        (
+            ObjectType::Button,
             position,
-            sprite: SpriteBundle {
-                texture: assets.button.clone(),
-                transform: Transform::from_translation(Vec3::new(0., 0., 1.)),
-                ..Default::default()
-            },
-            trigger: Trigger,
-        }
+            Sprite::from_image(assets.button.clone()),
+            Transform::from_translation(Vec3::new(0., 0., 1.)),
+            Trigger,
+        )
     }
 }
 
-#[derive(Bundle)]
-pub struct Creature1Bundle {
-    object_type: ObjectType,
-    atlas: TextureAtlas,
-    blocks_pushes: BlocksPushes,
-    deadly: Deadly,
-    direction: Direction,
-    movable: Movable,
-    position: Position,
-    sprite: SpriteBundle,
-    weight: Weight,
-}
+pub struct Creature1;
 
-impl Creature1Bundle {
-    pub fn spawn(assets: &GameObjectAssets, position: Position, direction: Direction) -> Self {
-        Self {
-            object_type: ObjectType::Creature1,
-            atlas: TextureAtlas {
-                layout: assets.creature1.1.clone(),
-                index: direction as usize,
-            },
-            blocks_pushes: BlocksPushes,
-            deadly: Deadly,
+impl Creature1 {
+    pub fn spawn(
+        assets: &GameObjectAssets,
+        position: Position,
+        direction: Direction,
+    ) -> impl Bundle {
+        (
+            ObjectType::Creature1,
+            BlocksPushes,
+            Deadly,
             direction,
-            movable: Movable::FollowRightHand,
+            Movable::FollowRightHand,
             position,
-            sprite: SpriteBundle {
-                texture: assets.creature1.0.clone(),
-                transform: Transform::from_translation(Vec3::new(0., 0., 4.)),
-                ..Default::default()
-            },
-            weight: Weight::Light,
-        }
+            Sprite::from_atlas_image(
+                assets.creature1.0.clone(),
+                TextureAtlas {
+                    layout: assets.creature1.1.clone(),
+                    index: direction as usize,
+                },
+            ),
+            Transform::from_translation(Vec3::new(0., 0., 4.)),
+            Weight::Light,
+        )
     }
 }
 
-#[derive(Bundle)]
-pub struct DoorBundle {
-    object_type: ObjectType,
-    atlas: TextureAtlas,
-    openable: Openable,
-    massive: Massive,
-    position: Position,
-    sprite: SpriteBundle,
-}
+pub struct Door;
 
-impl DoorBundle {
-    pub fn spawn(assets: &GameObjectAssets, position: Position) -> Self {
-        Self {
-            object_type: ObjectType::Door,
-            atlas: TextureAtlas {
-                layout: assets.door.1.clone(),
-                index: 0,
-            },
-            massive: Massive,
-            openable: Openable::Key,
+impl Door {
+    pub fn spawn(assets: &GameObjectAssets, position: Position) -> impl Bundle {
+        (
+            ObjectType::Door,
+            Massive,
+            Openable::Key,
             position,
-            sprite: SpriteBundle {
-                texture: assets.door.0.clone(),
-                transform: Transform::from_translation(Vec3::new(0., 0., 5.)),
-                ..Default::default()
-            },
-        }
+            Sprite::from_atlas_image(
+                assets.door.0.clone(),
+                TextureAtlas {
+                    layout: assets.door.1.clone(),
+                    index: 0,
+                },
+            ),
+            Transform::from_translation(Vec3::new(0., 0., 5.)),
+        )
     }
 }
 
-#[derive(Bundle)]
-pub struct EntranceBundle {
-    object_type: ObjectType,
-    atlas: TextureAtlas,
-    blocks_pushes: BlocksPushes,
-    entrance: Entrance,
-    position: Position,
-    sprite: SpriteBundle,
-}
-
-impl EntranceBundle {
-    pub fn spawn(assets: &GameObjectAssets, position: Position, level: u16) -> Self {
-        Self {
-            object_type: ObjectType::Entrance,
-            atlas: TextureAtlas {
-                layout: assets.entrance.1.clone(),
-                index: 0,
-            },
-            blocks_pushes: BlocksPushes,
-            entrance: Entrance(level),
+impl Entrance {
+    pub fn spawn(assets: &GameObjectAssets, position: Position, level: u16) -> impl Bundle {
+        (
+            ObjectType::Entrance,
+            BlocksPushes,
+            Entrance(level),
             position,
-            sprite: SpriteBundle {
-                texture: assets.entrance.0.clone(),
-                transform: Transform::from_translation(Vec3::new(0., 0., 1.)),
-                ..Default::default()
-            },
-        }
+            Sprite::from_atlas_image(
+                assets.entrance.0.clone(),
+                TextureAtlas {
+                    layout: assets.entrance.1.clone(),
+                    index: 0,
+                },
+            ),
+            Transform::from_translation(Vec3::new(0., 0., 1.)),
+        )
     }
 }
 
-#[derive(Bundle)]
-pub struct ExitBundle {
-    object_type: ObjectType,
-    blocks_pushes: BlocksPushes,
-    exit: Exit,
-    position: Position,
-    sprite: SpriteBundle,
-}
-
-impl ExitBundle {
-    pub fn spawn(assets: &GameObjectAssets, position: Position) -> Self {
-        Self {
-            object_type: ObjectType::Exit,
-            blocks_pushes: BlocksPushes,
-            exit: Exit,
+impl Exit {
+    pub fn spawn(assets: &GameObjectAssets, position: Position) -> impl Bundle {
+        (
+            ObjectType::Exit,
+            BlocksPushes,
+            Exit,
             position,
-            sprite: SpriteBundle {
-                texture: assets.exit.clone(),
-                transform: Transform::from_translation(Vec3::new(0., 0., 1.)),
-                ..Default::default()
-            },
-        }
+            Sprite::from_image(assets.exit.clone()),
+            Transform::from_translation(Vec3::new(0., 0., 1.)),
+        )
     }
 }
 
-#[derive(Bundle)]
-pub struct ExplosionBundle {
-    position: Position,
-    sprite: SpriteBundle,
-    volatile: Volatile,
-}
+pub struct Explosion;
 
-impl ExplosionBundle {
-    pub fn spawn(assets: &GameObjectAssets, position: Position) -> Self {
-        Self {
+impl Explosion {
+    pub fn spawn(assets: &GameObjectAssets, position: Position) -> impl Bundle {
+        (
             position,
-            sprite: SpriteBundle {
-                texture: assets.explosion.clone(),
-                transform: Transform::from_translation(Vec3::new(0., 0., 4.)),
-                ..Default::default()
-            },
-            volatile: Volatile,
-        }
+            Sprite::from_image(assets.explosion.clone()),
+            Transform::from_translation(Vec3::new(0., 0., 4.)),
+            Volatile,
+        )
     }
 }
 
-#[derive(Bundle)]
-pub struct GateBundle {
-    object_type: ObjectType,
-    atlas: TextureAtlas,
-    openable: Openable,
-    massive: Massive,
-    position: Position,
-    sprite: SpriteBundle,
-}
+pub struct Gate;
 
-impl GateBundle {
-    pub fn spawn(assets: &GameObjectAssets, position: Position, level: Option<u16>) -> Self {
-        Self {
-            object_type: ObjectType::Gate,
-            atlas: TextureAtlas {
-                layout: assets.gate.1.clone(),
-                index: 0,
-            },
-            massive: Massive,
-            openable: if let Some(level) = level {
+impl Gate {
+    pub fn spawn(assets: &GameObjectAssets, position: Position, level: Option<u16>) -> impl Bundle {
+        (
+            ObjectType::Gate,
+            Massive,
+            if let Some(level) = level {
                 Openable::LevelFinished(level)
             } else {
                 Openable::Trigger
             },
             position,
-            sprite: SpriteBundle {
-                texture: assets.gate.0.clone(),
-                transform: Transform::from_translation(Vec3::new(0., 0., 5.)),
-                ..Default::default()
-            },
-        }
+            Sprite::from_atlas_image(
+                assets.gate.0.clone(),
+                TextureAtlas {
+                    layout: assets.gate.1.clone(),
+                    index: 0,
+                },
+            ),
+            Transform::from_translation(Vec3::new(0., 0., 5.)),
+        )
     }
 }
 
-#[derive(Bundle)]
-pub struct GraveBundle {
-    massive: Massive,
-    position: Position,
-    sprite: SpriteBundle,
-}
+pub struct Grave;
 
-impl GraveBundle {
-    pub fn spawn(assets: &GameObjectAssets, position: Position) -> Self {
-        Self {
-            massive: Massive,
+impl Grave {
+    pub fn spawn(assets: &GameObjectAssets, position: Position) -> impl Bundle {
+        (
+            Massive,
             position,
-            sprite: SpriteBundle {
-                texture: assets.grave.clone(),
-                transform: Transform::from_translation(Vec3::new(0., 0., 4.)),
-                ..Default::default()
-            },
-        }
+            Sprite::from_image(assets.grave.clone()),
+            Transform::from_translation(Vec3::new(0., 0., 4.)),
+        )
     }
 }
 
-#[derive(Bundle)]
-pub struct IceBundle {
-    object_type: ObjectType,
-    blocks_movement: BlocksMovement,
-    position: Position,
-    slippery: Slippery,
-    sprite: SpriteBundle,
-}
+pub struct Ice;
 
-impl IceBundle {
-    pub fn spawn(assets: &GameObjectAssets, position: Position) -> Self {
-        Self {
-            object_type: ObjectType::Ice,
-            blocks_movement: BlocksMovement::Enabled,
+impl Ice {
+    pub fn spawn(assets: &GameObjectAssets, position: Position) -> impl Bundle {
+        (
+            ObjectType::Ice,
+            BlocksMovement::Enabled,
             position,
-            slippery: Slippery,
-            sprite: SpriteBundle {
-                texture: assets.ice.clone(),
-                transform: Transform::from_translation(Vec3::new(0., 0., 1.)),
-                ..Default::default()
-            },
-        }
+            Slippery,
+            Sprite::from_image(assets.ice.clone()),
+            Transform::from_translation(Vec3::new(0., 0., 1.)),
+        )
     }
 }
 
-#[derive(Bundle)]
-pub struct KeyBundle {
-    object_type: ObjectType,
-    key: Key,
-    position: Position,
-    pushable: Pushable,
-    sprite: SpriteBundle,
-    weight: Weight,
-}
-
-impl KeyBundle {
-    pub fn spawn(assets: &GameObjectAssets, position: Position) -> Self {
-        Self {
-            object_type: ObjectType::Key,
-            key: Key,
+impl Key {
+    pub fn spawn(assets: &GameObjectAssets, position: Position) -> impl Bundle {
+        (
+            ObjectType::Key,
+            Key,
             position,
-            pushable: Pushable,
-            sprite: SpriteBundle {
-                texture: assets.key.clone(),
-                transform: Transform::from_translation(Vec3::new(0., 0., 2.)),
-                ..Default::default()
-            },
-            weight: Weight::Light,
-        }
+            Pushable,
+            Sprite::from_image(assets.key.clone()),
+            Transform::from_translation(Vec3::new(0., 0., 2.)),
+            Weight::Light,
+        )
     }
 }
 
-#[derive(Bundle)]
-pub struct MineBundle {
-    object_type: ObjectType,
-    explosive: Explosive,
-    position: Position,
-    sprite: SpriteBundle,
-}
+pub struct Mine;
 
-impl MineBundle {
-    pub fn spawn(assets: &GameObjectAssets, position: Position) -> Self {
-        Self {
-            object_type: ObjectType::Mine,
-            explosive: Explosive,
+impl Mine {
+    pub fn spawn(assets: &GameObjectAssets, position: Position) -> impl Bundle {
+        (
+            ObjectType::Mine,
+            Explosive,
             position,
-            sprite: SpriteBundle {
-                texture: assets.mine.clone(),
-                transform: Transform::from_translation(Vec3::new(0., 0., 1.)),
-                ..Default::default()
-            },
-        }
+            Sprite::from_image(assets.mine.clone()),
+            Transform::from_translation(Vec3::new(0., 0., 1.)),
+        )
     }
 }
 
-#[derive(Bundle)]
-pub struct PlayerBundle {
-    object_type: ObjectType,
-    blocks_pushes: BlocksPushes,
-    player: Player,
-    position: Position,
-    sprite: SpriteBundle,
-    weight: Weight,
-}
-
-impl PlayerBundle {
-    pub fn spawn(assets: &GameObjectAssets, position: Position) -> Self {
-        Self {
-            object_type: ObjectType::Player,
-            blocks_pushes: BlocksPushes,
-            player: Player,
+impl Player {
+    pub fn spawn(assets: &GameObjectAssets, position: Position) -> impl Bundle {
+        (
+            ObjectType::Player,
+            BlocksPushes,
+            Player,
             position,
-            sprite: SpriteBundle {
-                texture: assets.player.clone(),
-                transform: Transform::from_translation(Vec3::new(0., 0., 3.)),
-                ..Default::default()
-            },
-            weight: Weight::Heavy,
-        }
+            Sprite::from_image(assets.player.clone()),
+            Transform::from_translation(Vec3::new(0., 0., 3.)),
+            Weight::Heavy,
+        )
     }
 }
 
-#[derive(Bundle)]
-pub struct PurpleBlockBundle {
-    object_type: ObjectType,
-    massive: Massive,
-    paintable: Paintable,
-    position: Position,
-    pushable: Pushable,
-    sprite: SpriteBundle,
-    transforms: TransformOnPush,
-    weight: Weight,
-}
+pub struct PurpleBlock;
 
-impl PurpleBlockBundle {
-    pub fn spawn(assets: &GameObjectAssets, position: Position) -> Self {
-        Self {
-            object_type: ObjectType::PurpleBlock,
-            massive: Massive,
-            paintable: Paintable,
+impl PurpleBlock {
+    pub fn spawn(assets: &GameObjectAssets, position: Position) -> impl Bundle {
+        (
+            ObjectType::PurpleBlock,
+            Massive,
+            Paintable,
             position,
-            pushable: Pushable,
-            sprite: SpriteBundle {
-                texture: assets.purple_block.clone(),
-                transform: Transform::from_translation(Vec3::new(0., 0., 3.)),
-                ..Default::default()
-            },
-            transforms: TransformOnPush(ObjectType::RedBlock),
-            weight: Weight::Heavy,
-        }
+            Pushable,
+            Sprite::from_image(assets.purple_block.clone()),
+            Transform::from_translation(Vec3::new(0., 0., 3.)),
+            TransformOnPush(ObjectType::RedBlock),
+            Weight::Heavy,
+        )
     }
 }
 
-#[derive(Bundle)]
-pub struct PurplePaintBundle {
-    object_type: ObjectType,
-    paint: Paint,
-    position: Position,
-    pushable: Pushable,
-    sprite: SpriteBundle,
-    weight: Weight,
-}
+pub struct PurplePaint;
 
-impl PurplePaintBundle {
-    pub fn spawn(assets: &GameObjectAssets, position: Position) -> Self {
-        Self {
-            object_type: ObjectType::PurplePaint,
-            paint: Paint(ObjectType::PurpleBlock),
+impl PurplePaint {
+    pub fn spawn(assets: &GameObjectAssets, position: Position) -> impl Bundle {
+        (
+            ObjectType::PurplePaint,
+            Paint(ObjectType::PurpleBlock),
             position,
-            pushable: Pushable,
-            sprite: SpriteBundle {
-                texture: assets.purple_paint.clone(),
-                transform: Transform::from_translation(Vec3::new(0., 0., 2.)),
-                ..Default::default()
-            },
-            weight: Weight::Light,
-        }
+            Pushable,
+            Sprite::from_image(assets.purple_paint.clone()),
+            Transform::from_translation(Vec3::new(0., 0., 2.)),
+            Weight::Light,
+        )
     }
 }
 
-#[derive(Bundle)]
-pub struct RaftBundle {
-    object_type: ObjectType,
-    floatable: Floatable,
-    position: Position,
-    pushable: Pushable,
-    sprite: SpriteBundle,
-    weight: Weight,
-}
+pub struct Raft;
 
-impl RaftBundle {
-    pub fn spawn(assets: &GameObjectAssets, position: Position) -> Self {
-        Self {
-            object_type: ObjectType::Raft,
-            floatable: Floatable,
+impl Raft {
+    pub fn spawn(assets: &GameObjectAssets, position: Position) -> impl Bundle {
+        (
+            ObjectType::Raft,
+            Floatable,
             position,
-            pushable: Pushable,
-            sprite: SpriteBundle {
-                texture: assets.raft.clone(),
-                transform: Transform::from_translation(Vec3::new(0., 0., 2.)),
-                ..Default::default()
-            },
-            weight: Weight::Heavy,
-        }
+            Pushable,
+            Sprite::from_image(assets.raft.clone()),
+            Transform::from_translation(Vec3::new(0., 0., 2.)),
+            Weight::Heavy,
+        )
     }
 }
 
-#[derive(Bundle)]
-pub struct RedBlockBundle {
-    object_type: ObjectType,
-    massive: Massive,
-    paintable: Paintable,
-    position: Position,
-    sprite: SpriteBundle,
-}
+pub struct RedBlock;
 
-impl RedBlockBundle {
-    pub fn spawn(assets: &GameObjectAssets, position: Position) -> Self {
-        Self {
-            object_type: ObjectType::RedBlock,
-            massive: Massive,
-            paintable: Paintable,
+impl RedBlock {
+    pub fn spawn(assets: &GameObjectAssets, position: Position) -> impl Bundle {
+        (
+            ObjectType::RedBlock,
+            Massive,
+            Paintable,
             position,
-            sprite: SpriteBundle {
-                texture: assets.red_block.clone(),
-                transform: Transform::from_translation(Vec3::new(0., 0., 2.)),
-                ..Default::default()
-            },
-        }
+            Sprite::from_image(assets.red_block.clone()),
+            Transform::from_translation(Vec3::new(0., 0., 2.)),
+        )
     }
 }
 
-#[derive(Bundle)]
-pub struct RedPaintBundle {
-    object_type: ObjectType,
-    paint: Paint,
-    position: Position,
-    pushable: Pushable,
-    sprite: SpriteBundle,
-    weight: Weight,
-}
+pub struct RedPaint;
 
-impl RedPaintBundle {
-    pub fn spawn(assets: &GameObjectAssets, position: Position) -> Self {
-        Self {
-            object_type: ObjectType::RedPaint,
-            paint: Paint(ObjectType::RedBlock),
+impl RedPaint {
+    pub fn spawn(assets: &GameObjectAssets, position: Position) -> impl Bundle {
+        (
+            ObjectType::RedPaint,
+            Paint(ObjectType::RedBlock),
             position,
-            pushable: Pushable,
-            sprite: SpriteBundle {
-                texture: assets.red_paint.clone(),
-                transform: Transform::from_translation(Vec3::new(0., 0., 2.)),
-                ..Default::default()
-            },
-            weight: Weight::Light,
-        }
+            Pushable,
+            Sprite::from_image(assets.red_paint.clone()),
+            Transform::from_translation(Vec3::new(0., 0., 2.)),
+            Weight::Light,
+        )
     }
 }
 
-#[derive(Bundle)]
-pub struct SplashBundle {
-    floatable: Floatable,
-    position: Position,
-    sprite: SpriteBundle,
-    volatile: Volatile,
-}
+pub struct Splash;
 
-impl SplashBundle {
-    pub fn spawn(assets: &GameObjectAssets, position: Position) -> Self {
-        Self {
-            floatable: Floatable,
+impl Splash {
+    pub fn spawn(assets: &GameObjectAssets, position: Position) -> impl Bundle {
+        (
+            Floatable,
             position,
-            sprite: SpriteBundle {
-                texture: assets.splash.clone(),
-                transform: Transform::from_translation(Vec3::new(0., 0., 4.)),
-                ..Default::default()
-            },
-            volatile: Volatile,
-        }
+            Sprite::from_image(assets.splash.clone()),
+            Transform::from_translation(Vec3::new(0., 0., 4.)),
+            Volatile,
+        )
     }
 }
 
-#[derive(Bundle)]
-pub struct TeleporterBundle {
-    object_type: ObjectType,
-    position: Position,
-    sprite: SpriteBundle,
-    teleporter: Teleporter,
-}
-
-impl TeleporterBundle {
-    pub fn spawn(assets: &GameObjectAssets, position: Position, identifier: u16) -> Self {
-        Self {
-            object_type: ObjectType::Teleporter,
+impl Teleporter {
+    pub fn spawn(assets: &GameObjectAssets, position: Position, identifier: u16) -> impl Bundle {
+        (
+            ObjectType::Teleporter,
             position,
-            sprite: SpriteBundle {
-                texture: assets.teleporter.clone(),
-                transform: Transform::from_translation(Vec3::new(0., 0., 1.)),
-                ..Default::default()
-            },
-            teleporter: Teleporter(identifier),
-        }
+            Sprite::from_image(assets.teleporter.clone()),
+            Transform::from_translation(Vec3::new(0., 0., 1.)),
+            Teleporter(identifier),
+        )
     }
 }
 
-#[derive(Bundle)]
-pub struct TransporterBundle {
-    object_type: ObjectType,
-    atlas: TextureAtlas,
-    blocks_movement: BlocksMovement,
-    direction: Direction,
-    position: Position,
-    sprite: SpriteBundle,
-    transporter: Transporter,
-}
-
-impl TransporterBundle {
-    pub fn spawn(assets: &GameObjectAssets, position: Position, direction: Direction) -> Self {
-        Self {
-            object_type: ObjectType::Transporter,
-            atlas: TextureAtlas {
-                layout: assets.transporter.1.clone(),
-                index: 0,
-            },
-            blocks_movement: BlocksMovement::Enabled,
+impl Transporter {
+    pub fn spawn(
+        assets: &GameObjectAssets,
+        position: Position,
+        direction: Direction,
+    ) -> impl Bundle {
+        (
+            ObjectType::Transporter,
+            BlocksMovement::Enabled,
             direction,
             position,
-            sprite: SpriteBundle {
-                texture: assets.transporter.0.clone(),
-                transform: Transform::from_translation(Vec3::new(0., 0., 1.)),
-                ..Default::default()
-            },
-            transporter: Transporter,
-        }
+            Sprite::from_atlas_image(
+                assets.transporter.0.clone(),
+                TextureAtlas {
+                    layout: assets.transporter.1.clone(),
+                    index: 0,
+                },
+            ),
+            Transform::from_translation(Vec3::new(0., 0., 1.)),
+            Transporter,
+        )
     }
 }
 
-#[derive(Bundle)]
-pub struct WaterBundle {
-    object_type: ObjectType,
-    animatable: Animatable,
-    atlas: TextureAtlas,
-    liquid: Liquid,
-    position: Position,
-    sprite: SpriteBundle,
-}
+pub struct Water;
 
-impl WaterBundle {
-    pub fn spawn(assets: &GameObjectAssets, position: Position) -> Self {
-        Self {
-            object_type: ObjectType::Water,
-            animatable: Animatable { num_frames: 3 },
-            atlas: TextureAtlas {
-                layout: assets.water.1.clone(),
-                index: 0,
-            },
-            liquid: Liquid,
+impl Water {
+    pub fn spawn(assets: &GameObjectAssets, position: Position) -> impl Bundle {
+        (
+            ObjectType::Water,
+            Animatable { num_frames: 3 },
+            Liquid,
             position,
-            sprite: SpriteBundle {
-                texture: assets.water.0.clone(),
-                transform: Transform::from_translation(Vec3::new(0., 0., 1.)),
-                ..Default::default()
-            },
-        }
+            Sprite::from_atlas_image(
+                assets.water.0.clone(),
+                TextureAtlas {
+                    layout: assets.water.1.clone(),
+                    index: 0,
+                },
+            ),
+            Transform::from_translation(Vec3::new(0., 0., 1.)),
+        )
     }
 }
 
-#[derive(Bundle)]
-pub struct YellowBlockBundle {
-    object_type: ObjectType,
-    massive: Massive,
-    paintable: Paintable,
-    position: Position,
-    pushable: Pushable,
-    sprite: SpriteBundle,
-    weight: Weight,
-}
+pub struct YellowBlock;
 
-impl YellowBlockBundle {
-    pub fn spawn(assets: &GameObjectAssets, position: Position) -> Self {
-        Self {
-            object_type: ObjectType::YellowBlock,
-            massive: Massive,
-            paintable: Paintable,
+impl YellowBlock {
+    pub fn spawn(assets: &GameObjectAssets, position: Position) -> impl Bundle {
+        (
+            ObjectType::YellowBlock,
+            Massive,
+            Paintable,
             position,
-            pushable: Pushable,
-            sprite: SpriteBundle {
-                texture: assets.yellow_block.clone(),
-                transform: Transform::from_translation(Vec3::new(0., 0., 3.)),
-                ..Default::default()
-            },
-            weight: Weight::Light,
-        }
+            Pushable,
+            Sprite::from_image(assets.yellow_block.clone()),
+            Transform::from_translation(Vec3::new(0., 0., 3.)),
+            Weight::Light,
+        )
     }
 }

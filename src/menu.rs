@@ -120,32 +120,29 @@ fn setup_menus(mut commands: Commands, window_query: Query<&Window>, fonts: Res<
             Menu {
                 kind: MenuKind::Hub,
             },
-            NodeBundle {
-                style: Style {
-                    display: Display::Flex,
-                    flex_direction: FlexDirection::Column,
-                    align_items: AlignItems::Center,
-                    justify_content: JustifyContent::Center,
-                    width: Val::Px(MENU_WIDTH),
-                    height: Val::Px(MENU_HEIGHT),
-                    border: UiRect::all(Val::Px(2.)),
-                    margin: UiRect::all(Val::Auto)
-                        .with_top(Val::Px(calculate_top_margin(window.size()))),
-                    padding: UiRect::all(Val::Auto),
-                    row_gap: Val::Px(40.),
-                    position_type: PositionType::Absolute,
-                    ..Default::default()
-                },
-                background_color: GRAY_BACKGROUND.into(),
-                border_color: RED.into(),
-                z_index: ZIndex::Global(100),
-                ..Default::default()
+            BackgroundColor(GRAY_BACKGROUND),
+            BorderColor(RED),
+            GlobalZIndex(100),
+            Node {
+                display: Display::Flex,
+                flex_direction: FlexDirection::Column,
+                align_items: AlignItems::Center,
+                justify_content: JustifyContent::Center,
+                width: Val::Px(MENU_WIDTH),
+                height: Val::Px(MENU_HEIGHT),
+                border: UiRect::all(Val::Px(2.)),
+                margin: UiRect::all(Val::Auto)
+                    .with_top(Val::Px(calculate_top_margin(window.size()))),
+                padding: UiRect::all(Val::Auto),
+                row_gap: Val::Px(40.),
+                position_type: PositionType::Absolute,
+                ..default()
             },
         ))
         .with_children(|cb| {
             for kind in MenuButtonKind::hub_buttons() {
-                cb.spawn(MenuButtonBundle::new(kind))
-                    .with_children(|cb| MenuButtonBundle::populate(cb, kind.label(), &fonts));
+                cb.spawn(MenuButton::new(kind))
+                    .with_children(|cb| MenuButton::populate(cb, kind.label(), &fonts));
             }
         });
 
@@ -154,38 +151,35 @@ fn setup_menus(mut commands: Commands, window_query: Query<&Window>, fonts: Res<
             Menu {
                 kind: MenuKind::Level,
             },
-            NodeBundle {
-                style: Style {
-                    display: Display::Flex,
-                    flex_direction: FlexDirection::Column,
-                    align_items: AlignItems::Center,
-                    justify_content: JustifyContent::Center,
-                    width: Val::Px(MENU_WIDTH),
-                    height: Val::Px(MENU_HEIGHT),
-                    border: UiRect::all(Val::Px(2.)),
-                    margin: UiRect::all(Val::Auto)
-                        .with_top(Val::Px(calculate_top_margin(window.size()))),
-                    padding: UiRect::all(Val::Auto),
-                    row_gap: Val::Px(40.),
-                    position_type: PositionType::Absolute,
-                    ..Default::default()
-                },
-                background_color: GRAY_BACKGROUND.into(),
-                border_color: RED.into(),
-                z_index: ZIndex::Global(100),
-                ..Default::default()
+            BackgroundColor(GRAY_BACKGROUND),
+            BorderColor(RED),
+            GlobalZIndex(100),
+            Node {
+                display: Display::Flex,
+                flex_direction: FlexDirection::Column,
+                align_items: AlignItems::Center,
+                justify_content: JustifyContent::Center,
+                width: Val::Px(MENU_WIDTH),
+                height: Val::Px(MENU_HEIGHT),
+                border: UiRect::all(Val::Px(2.)),
+                margin: UiRect::all(Val::Auto)
+                    .with_top(Val::Px(calculate_top_margin(window.size()))),
+                padding: UiRect::all(Val::Auto),
+                row_gap: Val::Px(40.),
+                position_type: PositionType::Absolute,
+                ..default()
             },
         ))
         .with_children(|cb| {
             for kind in MenuButtonKind::level_buttons() {
-                cb.spawn(MenuButtonBundle::new(kind))
-                    .with_children(|cb| MenuButtonBundle::populate(cb, kind.label(), &fonts));
+                cb.spawn(MenuButton::new(kind))
+                    .with_children(|cb| MenuButton::populate(cb, kind.label(), &fonts));
             }
         });
 }
 
 fn render_menu(
-    mut menu_query: Query<(&mut Style, &Menu)>,
+    mut menu_query: Query<(&mut Node, &Menu)>,
     mut button_query: Query<(&MenuButtonKind, &mut BackgroundColor)>,
     menu_state: Res<MenuState>,
 ) {
@@ -193,8 +187,8 @@ fn render_menu(
         return;
     }
 
-    for (mut menu_style, menu) in &mut menu_query {
-        menu_style.display = if menu_state.open_menu.is_some_and(|kind| kind == menu.kind) {
+    for (mut menu_node, menu) in &mut menu_query {
+        menu_node.display = if menu_state.open_menu.is_some_and(|kind| kind == menu.kind) {
             Display::Flex
         } else {
             Display::None
@@ -211,47 +205,34 @@ fn render_menu(
     }
 }
 
-#[derive(Bundle)]
-struct MenuButtonBundle {
-    button: ButtonBundle,
-}
+struct MenuButton;
 
-impl MenuButtonBundle {
+impl MenuButton {
     #[expect(clippy::new_ret_no_self)]
     pub fn new(marker: impl Bundle) -> impl Bundle {
         (
             marker,
-            Self {
-                button: ButtonBundle {
-                    background_color: BLUE.into(),
-                    style: Style {
-                        height: Val::Px(60.),
-                        width: Val::Px(300.),
-                        align_content: AlignContent::Center,
-                        ..Default::default()
-                    },
-                    ..Default::default()
-                },
+            Button,
+            BackgroundColor(BLUE),
+            Node {
+                height: Val::Px(60.),
+                width: Val::Px(300.),
+                align_content: AlignContent::Center,
+                ..default()
             },
         )
     }
 
     pub fn populate(cb: &mut ChildBuilder, text: impl Into<String>, fonts: &Fonts) {
-        cb.spawn(TextBundle {
-            text: Text::from_section(
-                text,
-                TextStyle {
-                    font: fonts.poppins_light.clone(),
-                    font_size: 40.,
-                    color: WHITE,
-                },
-            ),
-            style: Style {
+        cb.spawn((
+            Text::new(text),
+            TextColor(WHITE),
+            TextFont::from_font(fonts.poppins_light.clone()).with_font_size(36.),
+            Node {
                 margin: UiRect::all(Val::Auto),
-                ..Default::default()
+                ..default()
             },
-            ..Default::default()
-        });
+        ));
     }
 }
 
@@ -307,12 +288,12 @@ fn on_menu_interaction_input(
 }
 
 fn on_resize(
-    mut menu_query: Query<&mut Style, With<Menu>>,
+    mut menu_query: Query<&mut Node, With<Menu>>,
     window_query: Query<&Window, Changed<Window>>,
 ) {
     for window in &window_query {
-        for mut style in &mut menu_query {
-            style.margin.top = Val::Px(calculate_top_margin(window.size()));
+        for mut node in &mut menu_query {
+            node.margin.top = Val::Px(calculate_top_margin(window.size()));
         }
     }
 }

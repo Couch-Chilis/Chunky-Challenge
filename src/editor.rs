@@ -1,5 +1,5 @@
-mod button;
 mod editor_bundle;
+mod editor_button;
 mod editor_system;
 mod number_input;
 mod object_selector_bundle;
@@ -38,16 +38,16 @@ impl Plugin for EditorPlugin {
         .add_event::<SelectObject>()
         .add_event::<ToggleEditor>()
         .add_event::<ToggleSelection>()
-        .observe(change_height)
-        .observe(change_identifier)
-        .observe(change_level)
-        .observe(change_width)
-        .observe(move_all_objects)
-        .observe(on_activate_selection)
-        .observe(on_deselect_object)
-        .observe(on_select_object)
-        .observe(on_toggle_editor)
-        .observe(on_toggle_selection);
+        .add_observer(change_height)
+        .add_observer(change_identifier)
+        .add_observer(change_level)
+        .add_observer(change_width)
+        .add_observer(move_all_objects)
+        .add_observer(on_activate_selection)
+        .add_observer(on_deselect_object)
+        .add_observer(on_select_object)
+        .add_observer(on_toggle_editor)
+        .add_observer(on_toggle_selection);
     }
 }
 

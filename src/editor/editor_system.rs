@@ -13,16 +13,16 @@ use crate::{
 };
 
 use super::{
-    button::Button, number_input::NumberInput, ActivateSelection, ChangeHeight, ChangeIdentifier,
-    ChangeLevel, ChangeWidth, DeselectObject, Editor, EditorBundle, EditorObjectType, EditorState,
-    IdentifierInput, Input, LevelInput, MoveAllObjects, SelectObject, SelectionOverlay,
-    SelectionState, ToggleEditor, ToggleSelection,
+    editor_button::EditorButton, number_input::NumberInput, ActivateSelection, ChangeHeight,
+    ChangeIdentifier, ChangeLevel, ChangeWidth, DeselectObject, Editor, EditorObjectType,
+    EditorState, IdentifierInput, Input, LevelInput, MoveAllObjects, SelectObject,
+    SelectionOverlay, SelectionState, ToggleEditor, ToggleSelection,
 };
 
 pub fn on_editor_button_interaction(
     mut commands: Commands,
     mut interaction_query: Query<
-        (&Interaction, &Button, &mut BackgroundColor),
+        (&Interaction, &EditorButton, &mut BackgroundColor),
         Changed<Interaction>,
     >,
 ) {
@@ -31,11 +31,11 @@ pub fn on_editor_button_interaction(
             Interaction::Pressed => {
                 *color = WHITE.into();
                 match button {
-                    Button::Save => commands.trigger(SaveLevel {
+                    EditorButton::Save => commands.trigger(SaveLevel {
                         save_to_disk: true,
                         next_level: None,
                     }),
-                    Button::Select => commands.trigger(ToggleSelection),
+                    EditorButton::Select => commands.trigger(ToggleSelection),
                 }
             }
             Interaction::Hovered => {
@@ -114,12 +114,8 @@ pub fn on_dimensions_changed(
 
     for (input, number_input, mut text) in &mut input_query {
         match (input, number_input) {
-            (Input::Width, NumberInput::Value) => {
-                text.sections[0].value = dimensions.width.to_string()
-            }
-            (Input::Height, NumberInput::Value) => {
-                text.sections[0].value = dimensions.height.to_string()
-            }
+            (Input::Width, NumberInput::Value) => text.0 = dimensions.width.to_string(),
+            (Input::Height, NumberInput::Value) => text.0 = dimensions.height.to_string(),
             _ => continue,
         }
     }
@@ -228,14 +224,11 @@ fn extend_selection(
         commands.entity(background).with_children(|cb| {
             cb.spawn((
                 SelectionOverlay,
-                SpriteBundle {
-                    sprite: Sprite {
-                        color: BLUE.with_alpha(0.3),
-                        ..Default::default()
-                    },
-                    transform: Transform::from_translation(translation).with_scale(scale),
-                    ..Default::default()
+                Sprite {
+                    color: BLUE.with_alpha(0.3),
+                    ..default()
                 },
+                Transform::from_translation(translation).with_scale(scale),
             ));
         });
     }
@@ -358,8 +351,8 @@ pub fn on_editor_keyboard_input(
 pub fn on_select_object(
     trigger: Trigger<SelectObject>,
     mut commands: Commands,
-    mut identifier_input_query: Query<&mut Style, (With<IdentifierInput>, Without<LevelInput>)>,
-    mut level_input_query: Query<&mut Style, With<LevelInput>>,
+    mut identifier_input_query: Query<&mut Node, (With<IdentifierInput>, Without<LevelInput>)>,
+    mut level_input_query: Query<&mut Node, With<LevelInput>>,
     mut input_query: Query<(&Input, &NumberInput, &mut Text)>,
     objects: Query<(&Position, Option<&Entrance>, Option<&Teleporter>)>,
     mut editor_state: ResMut<EditorState>,
@@ -388,15 +381,15 @@ pub fn on_select_object(
 
     for (input, number_input, mut text) in &mut input_query {
         if *input == input_to_update && *number_input == NumberInput::Value {
-            text.sections[0].value = value.to_string();
+            text.0 = value.to_string();
         }
     }
 }
 
 pub fn on_deselect_object(
     _trigger: Trigger<DeselectObject>,
-    mut identifier_input_query: Query<&mut Style, (With<IdentifierInput>, Without<LevelInput>)>,
-    mut level_input_query: Query<&mut Style, With<LevelInput>>,
+    mut identifier_input_query: Query<&mut Node, (With<IdentifierInput>, Without<LevelInput>)>,
+    mut level_input_query: Query<&mut Node, With<LevelInput>>,
     mut editor_state: ResMut<EditorState>,
 ) {
     editor_state.selected_object = None;
@@ -435,8 +428,8 @@ pub fn on_toggle_editor(
         editor_state.is_open = true;
 
         commands
-            .spawn(EditorBundle::new())
-            .with_children(|cb| EditorBundle::populate(cb, &assets, &dimensions, &fonts));
+            .spawn(Editor::new())
+            .with_children(|cb| Editor::populate(cb, &assets, &dimensions, &fonts));
 
         movement_timer.pause();
         temporary_timer.pause();
@@ -450,7 +443,7 @@ pub fn on_toggle_selection(
     _trigger: Trigger<ToggleSelection>,
     mut commands: Commands,
     mut selection_query: Query<Entity, With<SelectionOverlay>>,
-    mut button_query: Query<(&Button, &mut Text)>,
+    mut button_query: Query<(&EditorButton, &mut Text)>,
     mut editor_state: ResMut<EditorState>,
 ) {
     editor_state.selection = if editor_state.selection == SelectionState::Disabled {
@@ -466,22 +459,20 @@ pub fn on_toggle_selection(
     }
 
     for (button, mut text) in &mut button_query {
-        if button == &Button::Select {
-            text.sections[0] = TextSection::new(
-                if editor_state.selection == SelectionState::WaitingForClick {
-                    "Cancel Selection"
-                } else {
-                    "Select"
-                },
-                text.sections[0].style.clone(),
-            );
+        if button == &EditorButton::Select {
+            text.0 = if editor_state.selection == SelectionState::WaitingForClick {
+                "Cancel Selection"
+            } else {
+                "Select"
+            }
+            .to_string();
         }
     }
 }
 
 pub fn on_activate_selection(
     trigger: Trigger<ActivateSelection>,
-    mut button_query: Query<(&Button, &mut Text)>,
+    mut button_query: Query<(&EditorButton, &mut Text)>,
     mut editor_state: ResMut<EditorState>,
 ) {
     let ActivateSelection { start, current } = trigger.event();
@@ -499,8 +490,8 @@ pub fn on_activate_selection(
     };
 
     for (button, mut text) in &mut button_query {
-        if button == &Button::Select {
-            text.sections[0] = TextSection::new("Clear Selection", text.sections[0].style.clone());
+        if button == &EditorButton::Select {
+            text.0 = "Clear Selection".to_string();
         }
     }
 }
@@ -546,7 +537,7 @@ pub fn change_identifier(
 
     for (input, number_input, mut text) in &mut input_query {
         if *input == Input::Identifier && *number_input == NumberInput::Value {
-            text.sections[0].value = teleporter.0.to_string();
+            text.0 = teleporter.0.to_string();
         }
     }
 }
@@ -587,7 +578,7 @@ pub fn change_level(
 
     for (input, number_input, mut text) in &mut input_query {
         if *input == Input::Level && *number_input == NumberInput::Value {
-            text.sections[0].value = entrance.0.to_string();
+            text.0 = entrance.0.to_string();
         }
     }
 }

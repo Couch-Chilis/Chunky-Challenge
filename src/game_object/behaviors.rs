@@ -21,12 +21,14 @@ use super::{
 pub fn animate_objects(
     mut timer: ResMut<AnimationTimer>,
     time: Res<Time>,
-    mut query: Query<(&Animatable, &mut TextureAtlas)>,
+    mut query: Query<(&Animatable, &mut Sprite)>,
 ) {
     timer.tick(time.delta());
     if timer.just_finished() {
-        for (animatable, mut atlas) in &mut query {
-            atlas.index = thread_rng().gen_range(0..animatable.num_frames);
+        for (animatable, mut sprite) in &mut query {
+            if let Some(atlas) = sprite.texture_atlas.as_mut() {
+                atlas.index = thread_rng().gen_range(0..animatable.num_frames);
+            }
         }
     }
 }
@@ -126,7 +128,7 @@ pub fn check_for_finished_levels(
         Option<&Entrance>,
         Option<&Openable>,
         Option<&Massive>,
-        Option<&mut TextureAtlas>,
+        &mut Sprite,
     )>,
     game_state: Res<GameState>,
 ) {
@@ -134,10 +136,10 @@ pub fn check_for_finished_levels(
         return;
     }
 
-    for (entity, entrance, openable, massive, atlas) in &mut query {
+    for (entity, entrance, openable, massive, mut sprite) in &mut query {
         if let Some(entrance) = entrance {
             if game_state.finished_levels.contains(&entrance.0) {
-                if let Some(mut atlas) = atlas {
+                if let Some(atlas) = sprite.texture_atlas.as_mut() {
                     atlas.index = 1;
                 }
             }
@@ -146,13 +148,13 @@ pub fn check_for_finished_levels(
             if opened && massive.is_some() {
                 commands.entity(entity).remove::<Massive>();
 
-                if let Some(mut atlas) = atlas {
+                if let Some(atlas) = sprite.texture_atlas.as_mut() {
                     atlas.index = 1;
                 }
             } else if !opened && massive.is_none() {
                 commands.entity(entity).insert(Massive);
 
-                if let Some(mut atlas) = atlas {
+                if let Some(atlas) = sprite.texture_atlas.as_mut() {
                     atlas.index = 0;
                 }
             }
@@ -163,16 +165,16 @@ pub fn check_for_finished_levels(
 #[expect(clippy::type_complexity)]
 pub fn check_for_key(
     mut commands: Commands,
-    mut openable_query: Query<(Entity, &Position, &Openable, Option<&mut TextureAtlas>)>,
+    mut openable_query: Query<(Entity, &Position, &Openable, &mut Sprite)>,
     moved_keys_query: Query<(Entity, &Position), (Changed<Position>, With<Key>)>,
 ) {
     for (key_entity, key_position) in &moved_keys_query {
-        for (openable_entity, openable_position, openable, atlas) in &mut openable_query {
+        for (openable_entity, openable_position, openable, mut sprite) in &mut openable_query {
             if matches!(openable, Openable::Key) && key_position == openable_position {
                 commands.entity(key_entity).despawn();
                 commands.entity(openable_entity).remove::<Massive>();
 
-                if let Some(mut atlas) = atlas {
+                if let Some(atlas) = sprite.texture_atlas.as_mut() {
                     atlas.index = 1;
                 }
             }
@@ -425,7 +427,7 @@ pub fn check_for_triggers(
         Option<&Openable>,
         Option<&Massive>,
         Option<&Trigger>,
-        Option<&mut TextureAtlas>,
+        &mut Sprite,
     )>,
     moved_objects_query: Query<Entity, Changed<Position>>,
     mut pressed_triggers: ResMut<PressedTriggers>,
@@ -437,11 +439,11 @@ pub fn check_for_triggers(
     let mut triggers = Vec::new();
     let mut openables = Vec::new();
     let mut objects = Vec::new();
-    for (entity, position, openable, massive, trigger, atlas) in &mut trigger_query {
+    for (entity, position, openable, massive, trigger, sprite) in &mut trigger_query {
         if trigger.is_some() {
             triggers.push(position);
         } else if matches!(openable, Some(Openable::Trigger)) {
-            openables.push((entity, massive, atlas));
+            openables.push((entity, massive, sprite));
         } else {
             objects.push(position);
         }
@@ -458,17 +460,17 @@ pub fn check_for_triggers(
         Ordering::Equal => return, // No change.
     };
 
-    for (entity, massive, atlas) in openables {
+    for (entity, massive, mut image_node) in openables {
         if opened && massive.is_some() {
             commands.entity(entity).remove::<Massive>();
 
-            if let Some(mut atlas) = atlas {
+            if let Some(atlas) = image_node.texture_atlas.as_mut() {
                 atlas.index = 1;
             }
         } else if !opened && massive.is_none() {
             commands.entity(entity).insert(Massive);
 
-            if let Some(mut atlas) = atlas {
+            if let Some(atlas) = image_node.texture_atlas.as_mut() {
                 atlas.index = 0;
             }
         }

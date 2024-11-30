@@ -3,39 +3,31 @@ use bevy::prelude::*;
 use crate::{constants::*, fonts::Fonts};
 
 #[derive(Component, Eq, PartialEq)]
+#[require(Node)]
 pub enum NumberInput {
     Increase,
     Decrease,
     Value,
 }
 
-#[derive(Bundle)]
-pub struct NumberInputBundle {
-    node: NodeBundle,
-}
-
-impl NumberInputBundle {
-    pub fn new() -> Self {
-        Self {
-            node: NodeBundle {
-                style: Style {
-                    width: Val::Percent(100.),
-                    height: Val::Px(30.),
-                    flex_direction: FlexDirection::Row,
-                    align_items: AlignItems::Center,
-                    justify_content: JustifyContent::Start,
-                    column_gap: Val::Px(20.),
-                    ..Default::default()
-                },
-                ..Default::default()
-            },
+impl NumberInput {
+    #[expect(clippy::new_ret_no_self)]
+    pub fn new() -> Node {
+        Node {
+            width: Val::Percent(100.),
+            height: Val::Px(30.),
+            flex_direction: FlexDirection::Row,
+            align_items: AlignItems::Center,
+            justify_content: JustifyContent::Start,
+            column_gap: Val::Px(20.),
+            ..default()
         }
     }
 
     pub fn hidden(marker: impl Component) -> impl Bundle {
-        let mut bundle = Self::new();
-        bundle.node.style.display = Display::None;
-        (bundle, marker)
+        let mut node = Self::new();
+        node.display = Display::None;
+        (node, marker)
     }
 
     pub fn populate(
@@ -45,88 +37,66 @@ impl NumberInputBundle {
         value: i16,
         fonts: &Fonts,
     ) {
-        let text_style = TextStyle {
-            font: fonts.poppins_light.clone(),
-            font_size: 18.,
-            color: WHITE,
-        };
+        let font = TextFont::from_font(fonts.poppins_light.clone()).with_font_size(18.);
+        let font_small = font.clone().with_font_size(10.);
 
-        cb.spawn(TextBundle {
-            text: Text::from_section(text, text_style.clone()),
-            style: Style {
+        cb.spawn((
+            Text::new(text),
+            TextColor(WHITE),
+            font.clone(),
+            Node {
                 width: Val::Px(60.),
-                ..Default::default()
+                ..default()
             },
-            ..Default::default()
-        });
+        ));
 
         cb.spawn((
             marker,
             NumberInput::Value,
-            TextBundle {
-                text: Text::from_section(value.to_string(), text_style),
-                ..Default::default()
-            },
+            Text::new(value.to_string()),
+            TextColor(WHITE),
+            font,
         ));
 
-        cb.spawn(NodeBundle {
-            style: Style {
-                width: Val::Px(20.),
-                height: Val::Px(22.),
-                flex_direction: FlexDirection::Column,
-                align_items: AlignItems::Center,
-                justify_content: JustifyContent::SpaceAround,
-                ..Default::default()
-            },
-            ..Default::default()
+        cb.spawn(Node {
+            width: Val::Px(20.),
+            height: Val::Px(22.),
+            flex_direction: FlexDirection::Column,
+            align_items: AlignItems::Center,
+            justify_content: JustifyContent::SpaceAround,
+            ..default()
         })
         .with_children(|cb| {
             cb.spawn((
                 marker,
                 Interaction::None,
                 NumberInput::Increase,
-                TextBundle {
-                    style: Style {
-                        width: Val::Px(20.),
-                        height: Val::Px(10.),
-                        margin: UiRect::bottom(Val::Px(1.)),
-                        align_content: AlignContent::Center,
-                        ..Default::default()
-                    },
-                    text: Text::from_section(
-                        "    +",
-                        TextStyle {
-                            font: fonts.poppins_light.clone(),
-                            font_size: 10.,
-                            color: WHITE,
-                        },
-                    ),
-                    background_color: GRAY_BACKGROUND.into(),
-                    ..Default::default()
+                Text::new("    +"),
+                TextColor(WHITE),
+                font_small.clone(),
+                BackgroundColor(GRAY_BACKGROUND),
+                Node {
+                    width: Val::Px(20.),
+                    height: Val::Px(10.),
+                    margin: UiRect::bottom(Val::Px(1.)),
+                    align_content: AlignContent::Center,
+                    ..default()
                 },
             ));
             cb.spawn((
                 marker,
                 Interaction::None,
                 NumberInput::Decrease,
-                TextBundle {
-                    style: Style {
-                        width: Val::Px(20.),
-                        height: Val::Px(10.),
-                        margin: UiRect::top(Val::Px(1.)),
-                        align_content: AlignContent::Center,
-                        ..Default::default()
-                    },
-                    text: Text::from_section(
-                        "    -",
-                        TextStyle {
-                            font: fonts.poppins_light.clone(),
-                            font_size: 10.,
-                            color: WHITE,
-                        },
-                    ),
-                    background_color: GRAY_BACKGROUND.into(),
-                    ..Default::default()
+                Text::new("    -"),
+                TextColor(WHITE),
+                font_small,
+                BackgroundColor(GRAY_BACKGROUND),
+                Node {
+                    width: Val::Px(20.),
+                    height: Val::Px(10.),
+                    margin: UiRect::top(Val::Px(1.)),
+                    align_content: AlignContent::Center,
+                    ..default()
                 },
             ));
         });

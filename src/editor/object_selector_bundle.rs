@@ -13,10 +13,8 @@ pub const SELECTOR_OUTLINE_WIDTH: i16 = 1;
 const SELECTOR_WIDTH: i16 = NUM_COLUMNS * GRID_SIZE + (NUM_COLUMNS - 1) * SELECTOR_OUTLINE_WIDTH;
 const SELECTOR_HEIGHT: i16 = NUM_ROWS * GRID_SIZE + (NUM_ROWS - 1) * SELECTOR_OUTLINE_WIDTH;
 
-#[derive(Component)]
-pub struct ObjectSelector;
-
 #[derive(Clone, Component, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
+#[require(Interaction)]
 pub enum EditorObjectType {
     Eraser,
     BlueBlock,
@@ -109,7 +107,7 @@ impl EditorObjectType {
         object_type.map(|object_type| (object_type, direction))
     }
 
-    fn get_texture(self, assets: &GameObjectAssets) -> (Handle<Image>, Option<TextureAtlas>) {
+    fn get_image_node(self, assets: &GameObjectAssets) -> Sprite {
         let image = match self {
             Self::Eraser => assets.eraser.clone(),
             Self::BlueBlock => assets.blue_block.clone(),
@@ -214,7 +212,11 @@ impl EditorObjectType {
             _ => None,
         };
 
-        (image, atlas)
+        if let Some(atlas) = atlas {
+            Sprite::from_atlas_image(image, atlas)
+        } else {
+            Sprite { image, ..default() }
+        }
     }
 }
 
@@ -261,52 +263,39 @@ impl TryFrom<i16> for EditorObjectType {
     }
 }
 
-#[derive(Bundle)]
-pub struct ObjectSelectorBundle {
-    background: NodeBundle,
-    selector: ObjectSelector,
-}
+#[derive(Component)]
+#[require(Node)]
+pub struct ObjectSelector;
 
-impl ObjectSelectorBundle {
-    pub fn new() -> Self {
-        Self {
-            background: NodeBundle {
-                style: Style {
-                    display: Display::Grid,
-                    width: Val::Px(SELECTOR_WIDTH as f32),
-                    height: Val::Px(SELECTOR_HEIGHT as f32),
-                    grid_template_columns: (0..NUM_COLUMNS)
-                        .map(|_| GridTrack::px(GRID_SIZE as f32))
-                        .collect(),
-                    grid_template_rows: (0..NUM_ROWS)
-                        .map(|_| GridTrack::px(GRID_SIZE as f32))
-                        .collect(),
-                    row_gap: Val::Px(SELECTOR_OUTLINE_WIDTH as f32),
-                    column_gap: Val::Px(SELECTOR_OUTLINE_WIDTH as f32),
-                    ..Default::default()
-                },
-                background_color: NORMAL_GRAY.into(),
-                ..Default::default()
+impl ObjectSelector {
+    #[expect(clippy::new_ret_no_self)]
+    pub fn new() -> impl Bundle {
+        (
+            ObjectSelector,
+            BackgroundColor(NORMAL_GRAY),
+            Node {
+                display: Display::Grid,
+                width: Val::Px(SELECTOR_WIDTH as f32),
+                height: Val::Px(SELECTOR_HEIGHT as f32),
+                grid_template_columns: (0..NUM_COLUMNS)
+                    .map(|_| GridTrack::px(GRID_SIZE as f32))
+                    .collect(),
+                grid_template_rows: (0..NUM_ROWS)
+                    .map(|_| GridTrack::px(GRID_SIZE as f32))
+                    .collect(),
+                row_gap: Val::Px(SELECTOR_OUTLINE_WIDTH as f32),
+                column_gap: Val::Px(SELECTOR_OUTLINE_WIDTH as f32),
+                ..default()
             },
-            selector: ObjectSelector,
-        }
+        )
     }
 
     pub fn populate(cb: &mut ChildBuilder, assets: &GameObjectAssets) {
         for i in 0..NUM_OBJECTS {
             let object_type = EditorObjectType::try_from(i).unwrap();
-            let (texture, atlas) = object_type.get_texture(assets);
-            let image = ImageBundle {
-                image: UiImage::new(texture),
-                ..Default::default()
-            };
-            let interaction = Interaction::None;
+            let image = object_type.get_image_node(assets);
 
-            if let Some(atlas) = atlas {
-                cb.spawn((object_type, interaction, image, atlas));
-            } else {
-                cb.spawn((object_type, interaction, image));
-            }
+            cb.spawn((object_type, image));
         }
     }
 }

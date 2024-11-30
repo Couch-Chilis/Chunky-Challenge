@@ -62,7 +62,7 @@ impl<'a> From<CollisionObjectQuery<'a>> for CollisionObject<'a> {
     }
 }
 
-impl<'a> CollisionObject<'a> {
+impl CollisionObject<'_> {
     pub fn blocks_movement(&self) -> bool {
         self.blocks_movement
             .as_ref()
