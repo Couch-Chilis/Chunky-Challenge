@@ -1,14 +1,14 @@
-mod editor_bundle;
 mod editor_button;
+mod editor_component;
 mod editor_system;
 mod number_input;
-mod object_selector_bundle;
+mod object_selector;
 mod object_selector_system;
 
 use bevy::prelude::*;
-pub use editor_bundle::*;
+pub use editor_component::*;
 pub use editor_system::*;
-pub use object_selector_bundle::*;
+pub use object_selector::*;
 use object_selector_system::*;
 
 use crate::game_object::Position;

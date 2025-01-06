@@ -107,7 +107,7 @@ impl EditorObjectType {
         object_type.map(|object_type| (object_type, direction))
     }
 
-    fn get_image_node(self, assets: &GameObjectAssets) -> Sprite {
+    fn get_image_node(self, assets: &GameObjectAssets) -> ImageNode {
         let image = match self {
             Self::Eraser => assets.eraser.clone(),
             Self::BlueBlock => assets.blue_block.clone(),
@@ -213,9 +213,9 @@ impl EditorObjectType {
         };
 
         if let Some(atlas) = atlas {
-            Sprite::from_atlas_image(image, atlas)
+            ImageNode::from_atlas_image(image, atlas)
         } else {
-            Sprite { image, ..default() }
+            ImageNode { image, ..default() }
         }
     }
 }
