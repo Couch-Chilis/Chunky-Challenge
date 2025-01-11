@@ -5,6 +5,8 @@
 Chunky is not your average hero. They are square, quirkily drawn, and they have
 an unquenchable thirst for solving puzzles.
 
+![](public/banner.png)
+
 - 100 clever puzzles? Check! (Well... 100 is our target for release, currently there are fewer!)
 - Chunky graphics? Check!
 - Push purple creatures on a mine using transporter belts? Boom!
