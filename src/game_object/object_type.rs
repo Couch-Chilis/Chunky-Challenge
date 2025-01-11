@@ -1,7 +1,7 @@
 use std::fmt::Display;
 use std::str::FromStr;
 
-use bevy::{ecs::system::EntityCommands, prelude::*};
+use bevy::prelude::*;
 
 use crate::{
     errors::UnknownObjectType, fonts::Fonts, levels::InitialPositionAndMetadata, ENTRANCE_TEXT,
@@ -127,13 +127,13 @@ impl ObjectType {
     }
 }
 
-pub fn spawn_object_of_type<'a>(
-    cb: &'a mut ChildBuilder,
+pub fn spawn_object_of_type(
+    cb: &mut ChildBuilder,
     assets: &GameObjectAssets,
     fonts: &Fonts,
     object_type: ObjectType,
     initial_position: InitialPositionAndMetadata,
-) -> EntityCommands<'a> {
+) {
     let position = initial_position.position;
 
     match object_type {
@@ -150,7 +150,7 @@ pub fn spawn_object_of_type<'a>(
             position,
             initial_position.direction.unwrap_or_default(),
         )),
-        ObjectType::Door => cb.spawn(Door::spawn(assets, position)),
+        ObjectType::Door => Door::spawn(cb, assets, position, initial_position),
         ObjectType::Entrance => {
             let mut cb = cb.spawn(Entrance::spawn(
                 assets,
@@ -169,7 +169,7 @@ pub fn spawn_object_of_type<'a>(
         }
         ObjectType::Exit => cb.spawn(Exit::spawn(assets, position)),
         ObjectType::Explosion => cb.spawn(Explosion::spawn(assets, position)),
-        ObjectType::Gate => cb.spawn(Gate::spawn(assets, position, initial_position.level)),
+        ObjectType::Gate => Gate::spawn(cb, assets, position, initial_position),
         ObjectType::Grave => cb.spawn(Grave::spawn(assets, position)),
         ObjectType::Ice => cb.spawn(Ice::spawn(assets, position)),
         ObjectType::Key => cb.spawn(Key::spawn(assets, position)),
@@ -193,5 +193,5 @@ pub fn spawn_object_of_type<'a>(
         )),
         ObjectType::Water => cb.spawn(Water::spawn(assets, position)),
         ObjectType::YellowBlock => cb.spawn(YellowBlock::spawn(assets, position)),
-    }
+    };
 }

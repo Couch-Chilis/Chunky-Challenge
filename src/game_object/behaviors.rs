@@ -280,6 +280,7 @@ pub fn check_for_transform_on_push(
                     direction: direction.copied(),
                     identifier: None,
                     level: None,
+                    open: false,
                 },
             });
         }

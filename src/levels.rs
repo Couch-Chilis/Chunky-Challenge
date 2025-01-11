@@ -84,6 +84,7 @@ impl Level {
         let mut direction = None;
         let mut identifier = None;
         let mut level = None;
+        let mut open = false;
         let mut objects: BTreeMap<ObjectType, Vec<InitialPositionAndMetadata>> = BTreeMap::new();
 
         let mut section_name = None;
@@ -94,6 +95,7 @@ impl Level {
                 direction = None;
                 identifier = None;
                 level = None;
+                open = false;
                 section_name = Some(&line[1..line.len() - 1]);
                 continue;
             }
@@ -134,6 +136,7 @@ impl Level {
                                 direction,
                                 identifier,
                                 level,
+                                open,
                             }),
                             _ => {
                                 println!("Invalid location ({x},{y})");
@@ -174,6 +177,14 @@ impl Level {
                         println!("Cannot parse level number: {value}");
                     }
                 }
+            } else if key == "Open" {
+                match value {
+                    "true" => open = true,
+                    "false" => open = false,
+                    _ => {
+                        println!("Cannot parse open value: {value}");
+                    }
+                }
             } else {
                 println!("Unknown key: {key}");
             }
@@ -204,12 +215,14 @@ impl Level {
             let mut current_direction = Direction::default();
             let mut current_identifier = 0;
             let mut current_level = 0;
+            let mut current_open = false;
             let mut last_x = None;
             for InitialPositionAndMetadata {
                 position,
                 direction,
                 identifier,
                 level,
+                open,
             } in positions
             {
                 if let Some(direction) = direction {
@@ -243,6 +256,15 @@ impl Level {
                         writeln!(content, "Level={level}").expect("writing failed");
                         current_level = level;
                     }
+                }
+
+                if open != current_open {
+                    if !content.ends_with('\n') {
+                        content.push('\n');
+                    }
+
+                    writeln!(content, "Open={open}").expect("writing failed");
+                    current_open = open;
                 }
 
                 if content.ends_with('\n') {
@@ -290,6 +312,7 @@ pub struct InitialPositionAndMetadata {
     pub direction: Option<Direction>,
     pub identifier: Option<u16>,
     pub level: Option<u16>,
+    pub open: bool,
 }
 
 impl From<&Position> for InitialPositionAndMetadata {
@@ -299,6 +322,7 @@ impl From<&Position> for InitialPositionAndMetadata {
             direction: None,
             identifier: None,
             level: None,
+            open: false,
         }
     }
 }

@@ -269,6 +269,7 @@ fn spawn_selected_object(
                 direction,
                 identifier: Some(1),
                 level: Some(1),
+                open: false,
             },
         });
 
@@ -573,6 +574,7 @@ pub fn change_level(
             direction: None,
             identifier: None,
             level: Some(entrance.0),
+            open: false,
         },
     });
 

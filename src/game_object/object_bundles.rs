@@ -1,5 +1,7 @@
 use bevy::prelude::*;
 
+use crate::levels::InitialPositionAndMetadata;
+
 use super::{
     assets::GameObjectAssets,
     components::{Exit, Liquid, Massive, Player, Position, Pushable},
@@ -108,21 +110,36 @@ impl Creature1 {
 pub struct Door;
 
 impl Door {
-    pub fn spawn(assets: &GameObjectAssets, position: Position) -> impl Bundle {
-        (
-            ObjectType::Door,
-            Massive,
-            Openable::Key,
-            position,
-            Sprite::from_atlas_image(
-                assets.door.0.clone(),
-                TextureAtlas {
-                    layout: assets.door.1.clone(),
-                    index: 0,
-                },
-            ),
-            Transform::from_translation(Vec3::new(0., 0., 5.)),
-        )
+    pub fn spawn<'a>(
+        cb: &'a mut ChildBuilder,
+        assets: &GameObjectAssets,
+        position: Position,
+        initial_position: InitialPositionAndMetadata,
+    ) -> EntityCommands<'a> {
+        let InitialPositionAndMetadata { open, .. } = initial_position;
+
+        let openable = Openable::Key;
+        let sprite = Sprite::from_atlas_image(
+            assets.door.0.clone(),
+            TextureAtlas {
+                layout: assets.door.1.clone(),
+                index: if open { 1 } else { 0 },
+            },
+        );
+        let transform = Transform::from_translation(Vec3::new(0., 0., 5.));
+
+        if open {
+            cb.spawn((ObjectType::Door, openable, position, sprite, transform))
+        } else {
+            cb.spawn((
+                ObjectType::Door,
+                Massive,
+                openable,
+                position,
+                sprite,
+                transform,
+            ))
+        }
     }
 }
 
@@ -174,25 +191,40 @@ impl Explosion {
 pub struct Gate;
 
 impl Gate {
-    pub fn spawn(assets: &GameObjectAssets, position: Position, level: Option<u16>) -> impl Bundle {
-        (
-            ObjectType::Gate,
-            Massive,
-            if let Some(level) = level {
-                Openable::LevelFinished(level)
-            } else {
-                Openable::Trigger
+    pub fn spawn<'a>(
+        cb: &'a mut ChildBuilder,
+        assets: &GameObjectAssets,
+        position: Position,
+        initial_position: InitialPositionAndMetadata,
+    ) -> EntityCommands<'a> {
+        let InitialPositionAndMetadata { level, open, .. } = initial_position;
+
+        let openable = if let Some(level) = level {
+            Openable::LevelFinished(level)
+        } else {
+            Openable::Trigger
+        };
+        let sprite = Sprite::from_atlas_image(
+            assets.gate.0.clone(),
+            TextureAtlas {
+                layout: assets.gate.1.clone(),
+                index: if open { 1 } else { 0 },
             },
-            position,
-            Sprite::from_atlas_image(
-                assets.gate.0.clone(),
-                TextureAtlas {
-                    layout: assets.gate.1.clone(),
-                    index: 0,
-                },
-            ),
-            Transform::from_translation(Vec3::new(0., 0., 5.)),
-        )
+        );
+        let transform = Transform::from_translation(Vec3::new(0., 0., 5.));
+
+        if open {
+            cb.spawn((ObjectType::Gate, openable, position, sprite, transform))
+        } else {
+            cb.spawn((
+                ObjectType::Gate,
+                Massive,
+                openable,
+                position,
+                sprite,
+                transform,
+            ))
+        }
     }
 }
 

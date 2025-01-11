@@ -30,7 +30,8 @@ use editor::{
 use fonts::Fonts;
 use game_object::{
     behaviors::*, spawn_object_of_type, CollisionObjectQuery, Direction, Entrance,
-    GameObjectAssets, ObjectType, Openable, Player, Position, Teleporter, Weight, PLAYER_ASSET,
+    GameObjectAssets, Massive, ObjectType, Openable, Player, Position, Teleporter, Weight,
+    PLAYER_ASSET,
 };
 use game_state::GameState;
 use gameover::{check_for_game_over, setup_gameover};
@@ -514,6 +515,7 @@ fn save_level(
         &Position,
         Option<&Direction>,
         Option<&Entrance>,
+        Option<&Massive>,
         Option<&Openable>,
         Option<&Teleporter>,
     )>,
@@ -524,7 +526,9 @@ fn save_level(
     } = trigger.event();
 
     let mut objects = BTreeMap::new();
-    for (object_type, position, direction, entrance, openable, teleporter) in &objects_query {
+    for (object_type, position, direction, entrance, massive, openable, teleporter) in
+        &objects_query
+    {
         if position.x > 0
             && position.x <= dimensions.width
             && position.y > 0
@@ -542,6 +546,7 @@ fn save_level(
                         Openable::Trigger => None,
                     })
                 }),
+                open: openable.is_some() && massive.is_none(),
             });
         }
     }
