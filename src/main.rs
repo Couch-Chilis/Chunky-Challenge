@@ -59,6 +59,14 @@ enum GameEvent {
     MovePlayer(i16, i16),
 }
 
+/// Resets the current level.
+///
+/// Resetting differs from restarting (using `GameEvent::LoadRelativeLevel(0)`)
+/// because it always resets to the version from disk and ignores what was saved
+/// in-memory.
+#[derive(Event)]
+struct ResetLevel;
+
 #[derive(Event)]
 struct SaveLevel {
     save_to_disk: bool,
@@ -102,9 +110,11 @@ fn main() {
         .insert_resource(GameState::load())
         .add_event::<ChangeZoom>()
         .add_event::<GameEvent>()
+        .add_event::<ResetLevel>()
         .add_event::<SaveLevel>()
         .add_event::<SpawnObject>()
         .add_observer(on_zoom_change)
+        .add_observer(reset_level)
         .add_observer(save_level)
         .add_observer(spawn_object)
         .add_systems(Startup, (set_window_icon, setup))
@@ -364,10 +374,10 @@ type PlayerComponents<'a> = (
 
 fn on_game_event(
     mut commands: Commands,
-    mut collision_objects_query: Query<CollisionObjectQuery, Without<Player>>,
-    mut game_state: ResMut<GameState>,
     mut level_events: EventReader<GameEvent>,
+    mut collision_objects_query: Query<CollisionObjectQuery, Without<Player>>,
     mut player_query: Query<PlayerComponents, With<Player>>,
+    mut game_state: ResMut<GameState>,
     mut ui_state: ResMut<UiState>,
     dimensions: Res<Dimensions>,
 ) {
@@ -503,6 +513,16 @@ Position=2,1
     } else {
         LEVEL_DEFAULT_ZOOM_FACTOR
     };
+}
+
+fn reset_level(
+    _trigger: Trigger<ResetLevel>,
+    mut game_state: ResMut<GameState>,
+    mut levels: ResMut<Levels>,
+) {
+    let level = game_state.current_level;
+    levels.reset_level(level);
+    game_state.set_current_level(level);
 }
 
 #[expect(clippy::type_complexity)]

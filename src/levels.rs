@@ -50,6 +50,24 @@ pub const LEVELS: &[(u16, &str)] = &[
 #[derive(Resource)]
 pub struct Levels(BTreeMap<u16, Cow<'static, str>>);
 
+impl Levels {
+    /// Resets the given level to its original state.
+    pub fn reset_level(&mut self, level: u16) {
+        match LEVELS
+            .iter()
+            .find(|(num, _)| *num == level)
+            .map(|(_, content)| content)
+        {
+            Some(content) => {
+                self.0.insert(level, Cow::Borrowed(*content));
+            }
+            None => {
+                self.0.remove(&level);
+            }
+        }
+    }
+}
+
 impl Default for Levels {
     fn default() -> Self {
         Self(

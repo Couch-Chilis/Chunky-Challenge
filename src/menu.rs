@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::{constants::*, editor::ToggleEditor, fonts::Fonts, setup, GameEvent};
+use crate::{constants::*, editor::ToggleEditor, fonts::Fonts, setup, GameEvent, ResetLevel};
 
 pub const MENU_WIDTH: f32 = 500.;
 pub const MENU_HEIGHT: f32 = 400.;
@@ -305,8 +305,12 @@ fn handle_button_press(
     mut menu_state: ResMut<MenuState>,
 ) {
     match menu_state.selected_button {
-        MenuButtonKind::Start | MenuButtonKind::Restart => {
+        MenuButtonKind::Start => {
             game_events.send(GameEvent::LoadRelativeLevel(0));
+            menu_state.open_menu = None;
+        }
+        MenuButtonKind::Restart => {
+            commands.trigger(ResetLevel);
             menu_state.open_menu = None;
         }
         MenuButtonKind::BackToHub => {
@@ -314,7 +318,6 @@ fn handle_button_press(
             menu_state.open_menu = None;
         }
         MenuButtonKind::Editor => {
-            game_events.send(GameEvent::LoadRelativeLevel(0));
             commands.trigger(ToggleEditor);
             menu_state.open_menu = None;
         }

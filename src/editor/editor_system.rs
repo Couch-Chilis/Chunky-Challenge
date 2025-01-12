@@ -9,7 +9,7 @@ use crate::{
     timers::{MovementTimer, TemporaryTimer, TransporterTimer},
     ui_state::UiState,
     utils::level_coords_from_pointer_coords,
-    Background, ChangeZoom, GameEvent, SaveLevel, SpawnObject,
+    Background, ChangeZoom, GameEvent, ResetLevel, SaveLevel, SpawnObject,
 };
 
 use super::{
@@ -427,6 +427,8 @@ pub fn on_toggle_editor(
         transporter_timer.unpause();
     } else {
         editor_state.is_open = true;
+
+        commands.trigger(ResetLevel);
 
         commands
             .spawn(Editor::new())
