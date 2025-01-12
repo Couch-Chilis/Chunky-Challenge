@@ -402,7 +402,9 @@ fn on_game_event(
                         &dimensions,
                         collision_objects_query.iter_mut().map(Into::into),
                         weight.copied().unwrap_or_default(),
-                    ) {
+                    )
+                    .is_ok()
+                    {
                         if let Ok(direction) = Direction::try_from((*dx, *dy)) {
                             if let Some(mut player_direction) = player_direction {
                                 *player_direction = direction;

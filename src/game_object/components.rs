@@ -117,7 +117,7 @@ impl TryFrom<(i16, i16)> for Direction {
     }
 }
 
-#[derive(Component)]
+#[derive(Component, Debug)]
 pub struct Animatable {
     pub num_frames: usize,
 }
@@ -128,7 +128,7 @@ pub struct Animatable {
 /// Can be temporarily disabled. This is used for transporters and slippery
 /// entities, which will temporarily stop blocking movement of objects it cannot
 /// push further.
-#[derive(Clone, Component, Copy, Default, Eq, PartialEq)]
+#[derive(Clone, Component, Copy, Debug, Default, Eq, PartialEq)]
 pub enum BlocksMovement {
     #[default]
     Enabled,
@@ -136,34 +136,34 @@ pub enum BlocksMovement {
 }
 
 /// A non-[Massive] entity that rejects being pushed on.
-#[derive(Component)]
+#[derive(Component, Debug)]
 pub struct BlocksPushes;
 
 /// A deadly entity will kill the player if it comes into contact with it.
-#[derive(Component)]
+#[derive(Component, Debug)]
 pub struct Deadly;
 
 /// An entrance to another level.
-#[derive(Component)]
+#[derive(Component, Debug)]
 pub struct Entrance(pub u16);
 
 /// An exit completes the level when stepped on.
-#[derive(Component)]
+#[derive(Component, Debug)]
 pub struct Exit;
 
 /// Explodes on contact.
 ///
 /// Should not be combined with [Deadly]. Dying is implied if the player
 /// explodes.
-#[derive(Component)]
+#[derive(Component, Debug)]
 pub struct Explosive;
 
 /// A floatable entity will not sink when it comes into contact with a liquid.
-#[derive(Component)]
+#[derive(Component, Debug)]
 pub struct Floatable;
 
 /// Entity acts as a key for opening [Openable::Key] entities.
-#[derive(Component)]
+#[derive(Component, Debug)]
 pub struct Key;
 
 /// Liquid entities will cause other entities to sink when it comes into
@@ -171,21 +171,21 @@ pub struct Key;
 ///
 /// Should not be combined with [Deadly]. Dying is implied if the player
 /// sinks.
-#[derive(Component)]
+#[derive(Component, Debug)]
 pub struct Liquid;
 
 /// A massive entity will prevent other entities from moving onto it.
 ///
 /// An entity that is both massive and [Movable] will move first, but prevent
 /// other entities from moving when it cannot be pushed further.
-#[derive(Component)]
+#[derive(Component, Debug)]
 pub struct Massive;
 
 /// Movable entities move by themselves.
 ///
 /// They face a given [Direction], while the [Movable] variant decides what will
 /// be their next direction.
-#[derive(Component)]
+#[derive(Component, Debug)]
 pub enum Movable {
     /// Bounces back in the opposite direction whenever they cannot move further
     /// in their current direction.
@@ -197,7 +197,7 @@ pub enum Movable {
 }
 
 /// A [Massive] entity that can be opened externally.
-#[derive(Component)]
+#[derive(Component, Debug)]
 pub enum Openable {
     /// Entity opens when a key is pushed onto it.
     Key,
@@ -210,17 +210,17 @@ pub enum Openable {
 }
 
 /// Entity is controlled by the player.
-#[derive(Component)]
+#[derive(Component, Debug)]
 pub struct Player;
 
 /// Entity that can paint [Paintable] entities.
 ///
 /// Painting transforms the paintable entity into the given [ObjectType].
-#[derive(Component)]
+#[derive(Component, Debug)]
 pub struct Paint(pub ObjectType);
 
 /// An entity that can be [Paint]ed.
-#[derive(Component)]
+#[derive(Component, Debug)]
 pub struct Paintable;
 
 /// A movable entity will be "pushed" if possible when another entity attempts
@@ -228,24 +228,24 @@ pub struct Paintable;
 ///
 /// Pushable entities can only be pushed by other entities of equal or more
 /// weight.
-#[derive(Component)]
+#[derive(Component, Debug)]
 pub struct Pushable;
 
 /// When an entity with a [Direction] gets onto a slippery entity, it keeps
 /// sliding in that direction until it's no longer on a slippery entity or
 /// cannot move further.
-#[derive(Component)]
+#[derive(Component, Debug)]
 pub struct Slippery;
 
 /// After pushing, entity transforms into another of the given type.
-#[derive(Component)]
+#[derive(Component, Debug)]
 pub struct TransformOnPush(pub ObjectType);
 
 /// Entity that can transport other entities to another teleporter.
 ///
 /// Teleporters are bi-directional and the target teleporter is the one with the
 /// same identifier.
-#[derive(Component, Eq, PartialEq)]
+#[derive(Component, Debug, Eq, PartialEq)]
 pub struct Teleporter(pub u16);
 
 /// Entity pushes all other entities that are placed on it towards a given
@@ -253,22 +253,22 @@ pub struct Teleporter(pub u16);
 ///
 /// This is not limited to [Pushable] entities, although the behavior for
 /// pushing uses the same constraints as for pushing [Pushable] entities.
-#[derive(Component)]
+#[derive(Component, Debug)]
 pub struct Transporter;
 
 /// Entity acts as trigger for opening [Openable::Trigger] entities.
-#[derive(Component)]
+#[derive(Component, Debug)]
 pub struct Trigger;
 
 /// Automatically disappears after spawning.
-#[derive(Component)]
+#[derive(Component, Debug)]
 pub struct Volatile;
 
 /// Weight of an entity.
 ///
 /// Pushable entities can only be pushed by other entities of equal or more
 /// weight.
-#[derive(Clone, Component, Copy, Default, Eq, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Component, Copy, Debug, Default, Eq, Ord, PartialEq, PartialOrd)]
 pub enum Weight {
     #[default]
     None,

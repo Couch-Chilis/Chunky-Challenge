@@ -327,13 +327,15 @@ pub fn check_for_slippery_and_transporter(
                 continue;
             };
 
-            if !move_object(
+            if move_object(
                 position,
                 direction.as_delta(),
                 &dimensions,
                 collision_objects.into_iter().map(|(.., object)| object),
                 Weight::None,
-            ) {
+            )
+            .is_err_and(MoveObjectError::is_collision)
+            {
                 // If an object on a slippery entity cannot be moved, the
                 // slippery entity's [BlocksMovement] component is disabled
                 // until the object is moved away.
@@ -354,13 +356,15 @@ pub fn check_for_slippery_and_transporter(
 
         if let Some((transportee, .., CollisionObject { position, .. })) = transportees.first_mut()
         {
-            if !move_object(
+            if move_object(
                 position,
                 direction.as_delta(),
                 &dimensions,
                 collision_objects.into_iter().map(|(.., object)| object),
                 Weight::None,
-            ) {
+            )
+            .is_err_and(MoveObjectError::is_collision)
+            {
                 // If an object on a transporter cannot be moved, the
                 // transporter's [BlocksMovement] component is disabled until
                 // the object is moved away.
@@ -509,35 +513,62 @@ pub fn move_objects(
     for (mut direction, movable, mut position, weight) in &mut movable_query {
         match movable {
             Movable::Bounce => {
-                if !move_object(
+                if move_object(
                     &mut position,
                     direction.as_delta(),
                     &dimensions,
                     collision_objects_query.iter_mut().map(Into::into),
                     weight.copied().unwrap_or_default(),
-                ) {
+                )
+                .is_err_and(MoveObjectError::is_collision)
+                {
                     *direction = direction.inverse();
                 }
             }
             Movable::FollowRightHand => {
-                if move_object(
+                let move_result = move_object(
                     &mut position,
                     direction.right_hand().as_delta(),
                     &dimensions,
                     collision_objects_query.iter_mut().map(Into::into),
                     weight.copied().unwrap_or_default(),
-                ) {
-                    *direction = direction.right_hand();
-                } else if !move_object(
-                    &mut position,
-                    direction.as_delta(),
-                    &dimensions,
-                    collision_objects_query.iter_mut().map(Into::into),
-                    weight.copied().unwrap_or_default(),
-                ) {
-                    *direction = direction.left_hand();
+                );
+                match move_result {
+                    Ok(()) => {
+                        *direction = direction.right_hand();
+                    }
+                    Err(err) if err.is_collision() => {
+                        if move_object(
+                            &mut position,
+                            direction.as_delta(),
+                            &dimensions,
+                            collision_objects_query.iter_mut().map(Into::into),
+                            weight.copied().unwrap_or_default(),
+                        )
+                        .is_err_and(MoveObjectError::is_collision)
+                        {
+                            *direction = direction.left_hand();
+                        }
+                    }
+                    Err(_) => {}
                 }
             }
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+pub enum MoveObjectError {
+    EdgeCollision,
+    ObjectCollision,
+    MovementBlocked,
+}
+
+impl MoveObjectError {
+    fn is_collision(self) -> bool {
+        match self {
+            Self::EdgeCollision | Self::ObjectCollision => true,
+            Self::MovementBlocked => false,
         }
     }
 }
@@ -548,11 +579,11 @@ pub fn move_object<'a>(
     dimensions: &Dimensions,
     collision_objects: impl Iterator<Item = CollisionObject<'a>>,
     max_weight: Weight,
-) -> bool {
+) -> Result<(), MoveObjectError> {
     let new_x = object_position.x + dx;
     let new_y = object_position.y + dy;
     if !dimensions.contains((new_x, new_y).into()) {
-        return false;
+        return Err(MoveObjectError::EdgeCollision);
     }
 
     let mut collision_objects: Vec<_> = collision_objects
@@ -604,7 +635,7 @@ pub fn move_object<'a>(
     let mut pushed_object_indices = Vec::new();
     for (index, collision_object) in collision_objects.iter().enumerate() {
         if collision_object.has_position(**object_position) && collision_object.blocks_movement() {
-            return false;
+            return Err(MoveObjectError::MovementBlocked);
         }
 
         if collision_object.has_position((new_x, new_y).into()) {
@@ -624,7 +655,7 @@ pub fn move_object<'a>(
             }
 
             if collision_object.is_massive() {
-                return false;
+                return Err(MoveObjectError::ObjectCollision);
             }
         }
     }
@@ -645,5 +676,5 @@ pub fn move_object<'a>(
 
     object_position.x = new_x;
     object_position.y = new_y;
-    true
+    Ok(())
 }

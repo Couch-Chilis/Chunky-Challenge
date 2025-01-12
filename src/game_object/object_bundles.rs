@@ -37,7 +37,7 @@ impl BluePaint {
             position,
             Pushable,
             Sprite::from_image(assets.blue_paint.clone()),
-            Transform::from_translation(Vec3::new(0., 0., 2.)),
+            Transform::from_translation(Vec3::new(0., 0., 3.)),
             Weight::Light,
         )
     }
@@ -326,7 +326,7 @@ impl PurplePaint {
             position,
             Pushable,
             Sprite::from_image(assets.purple_paint.clone()),
-            Transform::from_translation(Vec3::new(0., 0., 2.)),
+            Transform::from_translation(Vec3::new(0., 0., 3.)),
             Weight::Light,
         )
     }
@@ -373,7 +373,7 @@ impl RedPaint {
             position,
             Pushable,
             Sprite::from_image(assets.red_paint.clone()),
-            Transform::from_translation(Vec3::new(0., 0., 2.)),
+            Transform::from_translation(Vec3::new(0., 0., 3.)),
             Weight::Light,
         )
     }
