@@ -265,7 +265,7 @@ pub fn on_mouse_input(
         if ui_state.camera_offset != new_camera_offset {
             ui_state.camera_offset.0 += new_camera_offset.0;
             ui_state.camera_offset.1 += new_camera_offset.1;
-            commands.trigger(UpdateBackgroundTransform);
+            commands.send_event(UpdateBackgroundTransform);
         }
     }
 
@@ -422,14 +422,14 @@ fn on_game_event(
 fn on_player_moved(mut commands: Commands, query: Query<Ref<Position>, With<Player>>) {
     for player_position in &query {
         if player_position.is_changed() {
-            commands.trigger(UpdateBackgroundTransform);
+            commands.send_event(UpdateBackgroundTransform);
         }
     }
 }
 
 fn on_resize(mut commands: Commands, mut resize_reader: EventReader<WindowResized>) {
     if resize_reader.read().last().is_some() {
-        commands.trigger(UpdateBackgroundTransform);
+        commands.send_event(UpdateBackgroundTransform);
     }
 }
 
@@ -443,7 +443,7 @@ fn on_zoom_change(
     let zoom_factor = ui_state.zoom_factor;
     if (*factor < 1. && zoom_factor >= 0.2) || (*factor > 1. && zoom_factor <= 5.) {
         ui_state.zoom_factor = zoom_factor * factor;
-        commands.trigger(UpdateBackgroundTransform);
+        commands.send_event(UpdateBackgroundTransform);
     }
 }
 

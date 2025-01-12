@@ -295,7 +295,7 @@ pub fn on_editor_keyboard_input(
                     commands.trigger(MoveAllObjects { dx: 0, dy: -1 });
                 } else {
                     ui_state.camera_offset.1 -= 1.;
-                    commands.trigger(UpdateBackgroundTransform);
+                    commands.send_event(UpdateBackgroundTransform);
                 }
             }
             ArrowRight => {
@@ -303,7 +303,7 @@ pub fn on_editor_keyboard_input(
                     commands.trigger(MoveAllObjects { dx: 1, dy: 0 });
                 } else {
                     ui_state.camera_offset.0 += 1.;
-                    commands.trigger(UpdateBackgroundTransform);
+                    commands.send_event(UpdateBackgroundTransform);
                 }
             }
             ArrowDown => {
@@ -311,7 +311,7 @@ pub fn on_editor_keyboard_input(
                     commands.trigger(MoveAllObjects { dx: 0, dy: 1 });
                 } else {
                     ui_state.camera_offset.1 += 1.;
-                    commands.trigger(UpdateBackgroundTransform);
+                    commands.send_event(UpdateBackgroundTransform);
                 }
             }
             ArrowLeft => {
@@ -319,7 +319,7 @@ pub fn on_editor_keyboard_input(
                     commands.trigger(MoveAllObjects { dx: -1, dy: 0 });
                 } else {
                     ui_state.camera_offset.0 -= 1.;
-                    commands.trigger(UpdateBackgroundTransform);
+                    commands.send_event(UpdateBackgroundTransform);
                 }
             }
             Equal => {
@@ -439,7 +439,7 @@ pub fn on_toggle_editor(
         transporter_timer.pause();
     }
 
-    commands.trigger(UpdateBackgroundTransform);
+    commands.send_event(UpdateBackgroundTransform);
 }
 
 pub fn on_toggle_selection(

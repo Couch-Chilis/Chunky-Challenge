@@ -1,8 +1,8 @@
 use bevy::prelude::*;
 
 use crate::{
-    constants::*, editor::EditorState, levels::*, load_level, menu::MenuState, on_resize,
-    ui_state::UiState, utils::load_repeating_asset, Player, Position, INITIAL_HUB_FOCUS,
+    constants::*, editor::EditorState, levels::*, load_level, menu::MenuState, on_player_moved,
+    on_resize, ui_state::UiState, utils::load_repeating_asset, Player, Position, INITIAL_HUB_FOCUS,
 };
 
 const BACKGROUND_ASSET: &[u8] = include_bytes!("../assets/sprites/background.png");
@@ -20,8 +20,17 @@ impl Plugin for BackgroundPlugin {
         app.add_systems(Startup, setup_background)
             .init_resource::<BackgroundAsset>()
             .add_event::<UpdateBackgroundTransform>()
-            .add_systems(Update, resize_background.after(load_level).after(on_resize))
-            .add_observer(update_background_transform);
+            .add_systems(
+                Update,
+                resize_background
+                    .after(load_level)
+                    .after(on_resize)
+                    .after(on_player_moved),
+            )
+            .add_systems(
+                Update,
+                on_update_background_transform.after(resize_background),
+            );
     }
 }
 
@@ -60,12 +69,12 @@ fn resize_background(
         (dimensions.height * GRID_SIZE) as f32,
     ));
 
-    commands.trigger(UpdateBackgroundTransform);
+    commands.send_event(UpdateBackgroundTransform);
 }
 
 #[expect(clippy::too_many_arguments)]
-fn update_background_transform(
-    _trigger: Trigger<UpdateBackgroundTransform>,
+fn on_update_background_transform(
+    mut reader: EventReader<UpdateBackgroundTransform>,
     mut background_query: Query<&mut Transform, With<Background>>,
     player_query: Query<&Position, With<Player>>,
     window_query: Query<&Window>,
@@ -74,6 +83,14 @@ fn update_background_transform(
     menu_state: Res<MenuState>,
     ui_state: Res<UiState>,
 ) {
+    let mut empty = true;
+    for _event in reader.read() {
+        empty = false;
+    }
+    if empty {
+        return;
+    }
+
     let (focus_x, focus_y) = if menu_state.is_in_hub_menu() {
         (INITIAL_HUB_FOCUS.0, INITIAL_HUB_FOCUS.1)
     } else if let Ok(player_position) = player_query.get_single() {
