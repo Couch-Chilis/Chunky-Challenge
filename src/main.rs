@@ -14,7 +14,7 @@ mod timers;
 mod ui_state;
 mod utils;
 
-use std::{borrow::Cow, collections::BTreeMap, fs};
+use std::{borrow::Cow, collections::BTreeMap, fs, num::NonZero};
 
 use background::{Background, BackgroundPlugin, UpdateBackgroundTransform};
 use bevy::{
@@ -80,6 +80,7 @@ fn main() {
                     mode: get_initial_window_mode(),
                     resolution: WindowResolution::from((DEFAULT_WINDOW_SIZE, DEFAULT_WINDOW_SIZE))
                         .with_scale_factor_override(1.),
+                    desired_maximum_frame_latency: NonZero::new(60),
                     ..default()
                 }),
                 ..default()
