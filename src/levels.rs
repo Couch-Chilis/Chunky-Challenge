@@ -20,6 +20,7 @@ pub const LEVELS: &[(u16, &str)] = &[
     (6, include_str!("../assets/levels/level006")),
     (7, include_str!("../assets/levels/level007")),
     (8, include_str!("../assets/levels/level008")),
+    (9, include_str!("../assets/levels/level009")),
     (10, include_str!("../assets/levels/level010")),
     (11, include_str!("../assets/levels/level011")),
     (12, include_str!("../assets/levels/level012")),
@@ -48,22 +49,40 @@ pub const LEVELS: &[(u16, &str)] = &[
 ];
 
 #[derive(Resource)]
-pub struct Levels(BTreeMap<u16, Cow<'static, str>>);
+pub struct Levels(BTreeMap<u16, LevelData>);
 
 impl Levels {
+    /// Returns the contents of a level.
+    pub fn get(&self, level: u16) -> Option<&str> {
+        self.0.get(&level).map(|data| match &data.current {
+            Some(current) => current.as_str(),
+            None => data.stored.as_ref(),
+        })
+    }
+
+    /// Inserts the contents as the new current state of the level.
+    pub fn insert_current(&mut self, level: u16, contents: String) {
+        if let Some(data) = self.0.get_mut(&level) {
+            data.current = Some(contents);
+        }
+    }
+
+    /// Inserts the contents as the new stored contents of the level.
+    ///
+    /// This should only be used by the level editor.
+    pub fn insert_stored(&mut self, level: u16, contents: String) {
+        let level_data = LevelData {
+            stored: Cow::Owned(contents),
+            current: None,
+        };
+
+        self.0.insert(level, level_data);
+    }
+
     /// Resets the given level to its original state.
     pub fn reset_level(&mut self, level: u16) {
-        match LEVELS
-            .iter()
-            .find(|(num, _)| *num == level)
-            .map(|(_, content)| content)
-        {
-            Some(content) => {
-                self.0.insert(level, Cow::Borrowed(*content));
-            }
-            None => {
-                self.0.remove(&level);
-            }
+        if let Some(data) = self.0.get_mut(&level) {
+            data.current = None;
         }
     }
 }
@@ -73,24 +92,22 @@ impl Default for Levels {
         Self(
             LEVELS
                 .iter()
-                .map(|(level_num, data)| (*level_num, (*data).into()))
+                .map(|(level_num, contents)| {
+                    let data = LevelData {
+                        current: None,
+                        stored: (*contents).into(),
+                    };
+
+                    (*level_num, data)
+                })
                 .collect(),
         )
     }
 }
 
-impl std::ops::Deref for Levels {
-    type Target = BTreeMap<u16, Cow<'static, str>>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl std::ops::DerefMut for Levels {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
+struct LevelData {
+    current: Option<String>,
+    stored: Cow<'static, str>,
 }
 
 pub struct Level {

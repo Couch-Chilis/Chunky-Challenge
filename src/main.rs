@@ -461,7 +461,7 @@ fn load_level(
         return;
     }
 
-    let level_data = levels.get(&game_state.current_level).unwrap_or({
+    let level_data = levels.get(game_state.current_level).unwrap_or({
         &Cow::Borrowed(
             r#"[Player]
 Position=1,1
@@ -590,9 +590,11 @@ fn save_level(
         if let Err(error) = fs::write(get_level_path(current_level), &content) {
             println!("Could not save level: {error}");
         }
-    }
 
-    levels.insert(current_level, content.into());
+        levels.insert_stored(current_level, content);
+    } else {
+        levels.insert_current(current_level, content);
+    }
 
     if let Some(next_level) = next_level {
         game_state.set_current_level(*next_level);
