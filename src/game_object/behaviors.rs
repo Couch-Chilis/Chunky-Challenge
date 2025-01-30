@@ -173,6 +173,7 @@ pub fn check_for_key(
             if matches!(openable, Openable::Key) && key_position == openable_position {
                 commands.entity(key_entity).despawn();
                 commands.entity(openable_entity).remove::<Massive>();
+                commands.entity(openable_entity).remove::<Openable>();
 
                 if let Some(atlas) = sprite.texture_atlas.as_mut() {
                     atlas.index = 1;
