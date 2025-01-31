@@ -147,7 +147,6 @@ fn main() {
                 check_for_liquid,
                 check_for_game_over,
                 check_for_slippery_and_transporter,
-                check_for_transform_on_push,
                 despawn_volatile_objects,
                 move_objects,
                 on_game_event,
@@ -156,7 +155,8 @@ fn main() {
         )
         .add_systems(
             Update,
-            check_for_triggers
+            (check_for_transform_on_push, check_for_triggers)
+                .after(check_for_liquid)
                 .after(on_keyboard_input)
                 .after(move_objects),
         )
