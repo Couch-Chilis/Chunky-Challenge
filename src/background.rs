@@ -182,9 +182,9 @@ fn on_update_background_transform(
                 transform.translation,
                 translation,
                 match event {
+                    Some(UpdateBackgroundTransform::HubIntro) => EaseFunction::QuarticInOut,
                     Some(UpdateBackgroundTransform::LevelExit) => EaseFunction::QuarticIn,
-                    Some(UpdateBackgroundTransform::LevelEntrance) => EaseFunction::QuarticOut,
-                    _ => EaseFunction::QuarticInOut,
+                    _ => EaseFunction::QuarticOut,
                 },
             ),
             timer: Timer::new(Duration::from_millis(duration_ms), TimerMode::Once),
