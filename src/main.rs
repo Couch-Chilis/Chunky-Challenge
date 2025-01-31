@@ -38,11 +38,14 @@ use gameover::{check_for_game_over, setup_gameover};
 use levels::{Dimensions, InitialPositionAndMetadata, Level, Levels};
 use menu::{on_menu_keyboard_input, MenuKind, MenuPlugin, MenuState};
 use timers::{AnimationTimer, MovementTimer, TemporaryTimer, TransporterTimer};
-use ui_state::{UiState, HUB_DEFAULT_ZOOM_FACTOR, LEVEL_DEFAULT_ZOOM_FACTOR};
+use ui_state::UiState;
 use utils::get_level_path;
 use winit::window::Icon;
 
-pub const INITIAL_HUB_FOCUS: (i16, i16) = (33, 26);
+#[derive(Default, Resource)]
+struct ExitState {
+    next_level: Option<u16>,
+}
 
 #[derive(Default, Resource)]
 struct PressedTriggers {
@@ -54,23 +57,31 @@ struct ChangeZoom(f32);
 
 #[derive(Event)]
 enum GameEvent {
-    LoadLevel(u16),
-    LoadRelativeLevel(i16),
     MovePlayer(i16, i16),
 }
 
+/// Loads the given level.
+#[derive(Event)]
+struct LoadLevel(u16);
+
+/// Loads the relative level.
+///
+/// The level to load is calculated by adding the given delta to the current
+/// level. Commonly used to load the next/previous level by specifying 1/-1,
+/// respectively. Also used to reload the current level using a delta of 0.
+#[derive(Event)]
+struct LoadRelativeLevel(i16);
+
 /// Resets the current level.
 ///
-/// Resetting differs from restarting (using `GameEvent::LoadRelativeLevel(0)`)
-/// because it always resets to the version from disk and ignores what was saved
-/// in-memory.
+/// Resetting differs from restarting (using `LoadRelativeLevel(0)`) because it
+/// always resets to the version from disk and ignores what was saved in-memory.
 #[derive(Event)]
 struct ResetLevel;
 
 #[derive(Event)]
 struct SaveLevel {
     save_to_disk: bool,
-    next_level: Option<u16>,
 }
 
 #[derive(Event)]
@@ -99,6 +110,7 @@ fn main() {
         ))
         .init_resource::<AnimationTimer>()
         .init_resource::<Dimensions>()
+        .init_resource::<ExitState>()
         .init_resource::<Fonts>()
         .init_resource::<GameObjectAssets>()
         .init_resource::<Levels>()
@@ -110,14 +122,19 @@ fn main() {
         .insert_resource(GameState::load())
         .add_event::<ChangeZoom>()
         .add_event::<GameEvent>()
+        .add_event::<LoadLevel>()
+        .add_event::<LoadRelativeLevel>()
         .add_event::<ResetLevel>()
         .add_event::<SaveLevel>()
         .add_event::<SpawnObject>()
+        .add_observer(load_level)
+        .add_observer(load_relative_level)
         .add_observer(on_zoom_change)
         .add_observer(reset_level)
         .add_observer(save_level)
         .add_observer(spawn_object)
         .add_systems(Startup, (set_window_icon, setup))
+        .add_systems(PostStartup, post_setup)
         .add_systems(Update, (on_keyboard_input, on_mouse_input, on_resize))
         .add_systems(
             Update,
@@ -143,7 +160,6 @@ fn main() {
                 .after(on_keyboard_input)
                 .after(move_objects),
         )
-        .add_systems(Update, load_level.after(on_game_event))
         .add_systems(
             Update,
             (
@@ -153,7 +169,6 @@ fn main() {
                 check_for_teleporter,
                 on_player_moved,
             )
-                .after(load_level)
                 .after(move_objects)
                 .after(on_mouse_input),
         )
@@ -215,6 +230,10 @@ fn setup(
     setup_gameover(&mut commands, &fonts);
 }
 
+fn post_setup(mut commands: Commands) {
+    commands.trigger(LoadLevel(0));
+}
+
 #[expect(clippy::too_many_arguments, clippy::type_complexity)]
 pub fn on_mouse_input(
     mut commands: Commands,
@@ -265,7 +284,7 @@ pub fn on_mouse_input(
         if ui_state.camera_offset != new_camera_offset {
             ui_state.camera_offset.0 += new_camera_offset.0;
             ui_state.camera_offset.1 += new_camera_offset.1;
-            commands.send_event(UpdateBackgroundTransform);
+            commands.send_event(UpdateBackgroundTransform::Fast);
         }
     }
 
@@ -281,14 +300,17 @@ fn on_keyboard_input(
     mut menu_state: ResMut<MenuState>,
     editor_state: ResMut<EditorState>,
     ui_state: ResMut<UiState>,
+    exit_state: Res<ExitState>,
     game_state: Res<GameState>,
     keys: Res<ButtonInput<KeyCode>>,
 ) {
     if editor_state.is_open {
-        on_editor_keyboard_input(commands, game_events, editor_state, ui_state, keys);
+        on_editor_keyboard_input(commands, editor_state, ui_state, keys);
         return;
     } else if menu_state.is_open() {
-        on_menu_keyboard_input(commands, app_exit_events, game_events, menu_state, keys);
+        on_menu_keyboard_input(commands, app_exit_events, menu_state, keys);
+        return;
+    } else if exit_state.next_level.is_some() {
         return;
     }
 
@@ -308,7 +330,7 @@ fn on_keyboard_input(
                 game_events.send(GameEvent::MovePlayer(-1, 0));
             }
             Enter if player_query.get_single().is_err() => {
-                game_events.send(GameEvent::LoadRelativeLevel(0));
+                commands.trigger(LoadRelativeLevel(0));
             }
             Equal => {
                 commands.trigger(ChangeZoom(1.25));
@@ -317,16 +339,16 @@ fn on_keyboard_input(
                 commands.trigger(ChangeZoom(0.8));
             }
             BracketRight => {
-                game_events.send(GameEvent::LoadRelativeLevel(1));
+                commands.trigger(LoadRelativeLevel(1));
             }
             BracketLeft => {
-                game_events.send(GameEvent::LoadRelativeLevel(-1));
+                commands.trigger(LoadRelativeLevel(-1));
             }
             KeyE => {
                 commands.trigger(ToggleEditor);
             }
             KeyR => {
-                game_events.send(GameEvent::LoadRelativeLevel(0));
+                commands.trigger(LoadRelativeLevel(0));
             }
             Escape => {
                 menu_state.set_open(if game_state.is_in_hub() {
@@ -377,19 +399,11 @@ fn on_game_event(
     mut level_events: EventReader<GameEvent>,
     mut collision_objects_query: Query<CollisionObjectQuery, Without<Player>>,
     mut player_query: Query<PlayerComponents, With<Player>>,
-    mut game_state: ResMut<GameState>,
     mut ui_state: ResMut<UiState>,
     dimensions: Res<Dimensions>,
 ) {
     for event in level_events.read() {
         match event {
-            GameEvent::LoadLevel(level) => {
-                game_state.set_current_level(*level);
-            }
-            GameEvent::LoadRelativeLevel(delta) => {
-                let new_level = game_state.current_level.saturating_add_signed(*delta);
-                game_state.set_current_level(new_level);
-            }
             GameEvent::MovePlayer(dx, dy) => {
                 if let Ok((player, mut position, player_direction, weight)) =
                     player_query.get_single_mut()
@@ -422,14 +436,14 @@ fn on_game_event(
 fn on_player_moved(mut commands: Commands, query: Query<Ref<Position>, With<Player>>) {
     for player_position in &query {
         if player_position.is_changed() {
-            commands.send_event(UpdateBackgroundTransform);
+            commands.send_event(UpdateBackgroundTransform::Fast);
         }
     }
 }
 
 fn on_resize(mut commands: Commands, mut resize_reader: EventReader<WindowResized>) {
     if resize_reader.read().last().is_some() {
-        commands.send_event(UpdateBackgroundTransform);
+        commands.send_event(UpdateBackgroundTransform::Immediate);
     }
 }
 
@@ -443,27 +457,29 @@ fn on_zoom_change(
     let zoom_factor = ui_state.zoom_factor;
     if (*factor < 1. && zoom_factor >= 0.2) || (*factor > 1. && zoom_factor <= 5.) {
         ui_state.zoom_factor = zoom_factor * factor;
-        commands.send_event(UpdateBackgroundTransform);
+        commands.send_event(UpdateBackgroundTransform::Fast);
     }
 }
 
 #[expect(clippy::too_many_arguments)]
 fn load_level(
+    trigger: Trigger<LoadLevel>,
     mut commands: Commands,
     mut background_query: Query<Entity, With<Background>>,
+    mut background_events: EventWriter<UpdateBackgroundTransform>,
     mut dimensions: ResMut<Dimensions>,
+    mut exit_state: ResMut<ExitState>,
+    mut game_state: ResMut<GameState>,
     mut pressed_triggers: ResMut<PressedTriggers>,
-    mut ui_state: ResMut<UiState>,
     assets: Res<GameObjectAssets>,
     fonts: Res<Fonts>,
-    game_state: Res<GameState>,
     levels: Res<Levels>,
+    menu_state: Res<MenuState>,
 ) {
-    if !game_state.is_changed() {
-        return;
-    }
+    let LoadLevel(level) = trigger.event();
+    game_state.set_current_level(*level);
 
-    let level_data = levels.get(game_state.current_level).unwrap_or({
+    let level_data = levels.get(*level).unwrap_or({
         &Cow::Borrowed(
             r#"[Player]
 Position=1,1
@@ -510,11 +526,23 @@ Position=2,1
 
     *dimensions = level.dimensions;
 
-    ui_state.zoom_factor = if game_state.is_in_hub() && game_state.previous_level.is_none() {
-        HUB_DEFAULT_ZOOM_FACTOR
+    exit_state.next_level = None;
+
+    background_events.send(if menu_state.is_in_hub_menu() {
+        UpdateBackgroundTransform::Immediate
     } else {
-        LEVEL_DEFAULT_ZOOM_FACTOR
-    };
+        UpdateBackgroundTransform::LevelEntrance
+    });
+}
+
+fn load_relative_level(
+    trigger: Trigger<LoadRelativeLevel>,
+    mut commands: Commands,
+    game_state: Res<GameState>,
+) {
+    let LoadRelativeLevel(delta) = trigger.event();
+    let new_level = game_state.current_level.saturating_add_signed(*delta);
+    commands.trigger(LoadLevel(new_level));
 }
 
 fn reset_level(
@@ -530,9 +558,9 @@ fn reset_level(
 #[expect(clippy::type_complexity)]
 fn save_level(
     trigger: Trigger<SaveLevel>,
-    mut game_state: ResMut<GameState>,
     mut levels: ResMut<Levels>,
     dimensions: Res<Dimensions>,
+    game_state: Res<GameState>,
     objects_query: Query<(
         &ObjectType,
         &Position,
@@ -543,10 +571,7 @@ fn save_level(
         Option<&Teleporter>,
     )>,
 ) {
-    let SaveLevel {
-        save_to_disk,
-        next_level,
-    } = trigger.event();
+    let SaveLevel { save_to_disk } = trigger.event();
 
     let mut objects = BTreeMap::new();
     for (object_type, position, direction, entrance, massive, openable, teleporter) in
@@ -596,10 +621,6 @@ fn save_level(
         levels.insert_stored(current_level, content);
     } else {
         levels.insert_current(current_level, content);
-    }
-
-    if let Some(next_level) = next_level {
-        game_state.set_current_level(*next_level);
     }
 }
 

@@ -9,7 +9,7 @@ use crate::{
     timers::{MovementTimer, TemporaryTimer, TransporterTimer},
     ui_state::UiState,
     utils::level_coords_from_pointer_coords,
-    Background, ChangeZoom, GameEvent, ResetLevel, SaveLevel, SpawnObject,
+    Background, ChangeZoom, LoadRelativeLevel, ResetLevel, SaveLevel, SpawnObject,
 };
 
 use super::{
@@ -31,10 +31,7 @@ pub fn on_editor_button_interaction(
             Interaction::Pressed => {
                 *color = WHITE.into();
                 match button {
-                    EditorButton::Save => commands.trigger(SaveLevel {
-                        save_to_disk: true,
-                        next_level: None,
-                    }),
+                    EditorButton::Save => commands.trigger(SaveLevel { save_to_disk: true }),
                     EditorButton::Select => commands.trigger(ToggleSelection),
                 }
             }
@@ -282,7 +279,6 @@ fn spawn_selected_object(
 
 pub fn on_editor_keyboard_input(
     mut commands: Commands,
-    mut events: EventWriter<GameEvent>,
     mut editor_state: ResMut<EditorState>,
     mut ui_state: ResMut<UiState>,
     keys: Res<ButtonInput<KeyCode>>,
@@ -295,7 +291,7 @@ pub fn on_editor_keyboard_input(
                     commands.trigger(MoveAllObjects { dx: 0, dy: -1 });
                 } else {
                     ui_state.camera_offset.1 -= 1.;
-                    commands.send_event(UpdateBackgroundTransform);
+                    commands.send_event(UpdateBackgroundTransform::Fast);
                 }
             }
             ArrowRight => {
@@ -303,7 +299,7 @@ pub fn on_editor_keyboard_input(
                     commands.trigger(MoveAllObjects { dx: 1, dy: 0 });
                 } else {
                     ui_state.camera_offset.0 += 1.;
-                    commands.send_event(UpdateBackgroundTransform);
+                    commands.send_event(UpdateBackgroundTransform::Fast);
                 }
             }
             ArrowDown => {
@@ -311,7 +307,7 @@ pub fn on_editor_keyboard_input(
                     commands.trigger(MoveAllObjects { dx: 0, dy: 1 });
                 } else {
                     ui_state.camera_offset.1 += 1.;
-                    commands.send_event(UpdateBackgroundTransform);
+                    commands.send_event(UpdateBackgroundTransform::Fast);
                 }
             }
             ArrowLeft => {
@@ -319,7 +315,7 @@ pub fn on_editor_keyboard_input(
                     commands.trigger(MoveAllObjects { dx: -1, dy: 0 });
                 } else {
                     ui_state.camera_offset.0 -= 1.;
-                    commands.send_event(UpdateBackgroundTransform);
+                    commands.send_event(UpdateBackgroundTransform::Fast);
                 }
             }
             Equal => {
@@ -329,7 +325,7 @@ pub fn on_editor_keyboard_input(
                 commands.trigger(ChangeZoom(0.8));
             }
             KeyR => {
-                events.send(GameEvent::LoadRelativeLevel(0));
+                commands.trigger(LoadRelativeLevel(0));
             }
             KeyE => {
                 commands.trigger(ToggleEditor);
@@ -439,7 +435,7 @@ pub fn on_toggle_editor(
         transporter_timer.pause();
     }
 
-    commands.send_event(UpdateBackgroundTransform);
+    commands.send_event(UpdateBackgroundTransform::Immediate);
 }
 
 pub fn on_toggle_selection(

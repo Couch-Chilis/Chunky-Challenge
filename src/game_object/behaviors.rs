@@ -4,12 +4,13 @@ use bevy::prelude::*;
 use rand::{thread_rng, Rng};
 
 use crate::{
+    background::UpdateBackgroundTransform,
     editor::EditorState,
     game_object::Pushable,
     game_state::GameState,
     levels::{Dimensions, InitialPositionAndMetadata},
     timers::{AnimationTimer, MovementTimer, TemporaryTimer, TransporterTimer},
-    GameEvent, PressedTriggers, SaveLevel, SpawnObject,
+    ExitState, PressedTriggers, SaveLevel, SpawnObject,
 };
 
 use super::{
@@ -56,6 +57,8 @@ pub fn check_for_entrance(
     mut commands: Commands,
     player_query: Query<Ref<Position>, With<Player>>,
     entrance_query: Query<(&Entrance, &Position)>,
+    mut background_events: EventWriter<UpdateBackgroundTransform>,
+    mut exit_state: ResMut<ExitState>,
 ) {
     for player_position in &player_query {
         if player_position.is_added() || !player_position.is_changed() {
@@ -66,8 +69,9 @@ pub fn check_for_entrance(
             if player_position.as_ref() == entrance_position {
                 commands.trigger(SaveLevel {
                     save_to_disk: false,
-                    next_level: Some(entrance.0),
                 });
+                exit_state.next_level = Some(entrance.0);
+                background_events.send(UpdateBackgroundTransform::LevelExit);
                 return;
             }
         }
@@ -77,7 +81,8 @@ pub fn check_for_entrance(
 pub fn check_for_exit(
     player_query: Query<Ref<Position>, With<Player>>,
     exit_query: Query<&Position, With<Exit>>,
-    mut level_events: EventWriter<GameEvent>,
+    mut background_events: EventWriter<UpdateBackgroundTransform>,
+    mut exit_state: ResMut<ExitState>,
     mut game_state: ResMut<GameState>,
 ) {
     for player_position in &player_query {
@@ -89,7 +94,8 @@ pub fn check_for_exit(
             if player_position.as_ref() == exit_position {
                 let finished_level = game_state.current_level;
                 game_state.finished_levels.insert(finished_level);
-                level_events.send(GameEvent::LoadLevel(0));
+                exit_state.next_level = Some(0);
+                background_events.send(UpdateBackgroundTransform::LevelExit);
                 return;
             }
         }

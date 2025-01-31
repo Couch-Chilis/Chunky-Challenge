@@ -1,17 +1,40 @@
+use std::time::Duration;
+
 use bevy::prelude::*;
 
 use crate::{
     constants::*, editor::EditorState, levels::*, load_level, menu::MenuState, on_player_moved,
-    on_resize, ui_state::UiState, utils::load_repeating_asset, Player, Position, INITIAL_HUB_FOCUS,
+    on_resize, ui_state::UiState, utils::load_repeating_asset, ExitState, LoadLevel, Player,
+    Position,
 };
 
 const BACKGROUND_ASSET: &[u8] = include_bytes!("../assets/sprites/background.png");
 
+const INITIAL_HUB_FOCUS: (i16, i16) = (33, 26);
+const INITIAL_HUB_ZOOM_FACTOR: f32 = 0.32768;
+
 #[derive(Component)]
 pub struct Background;
 
-#[derive(Event)]
-pub struct UpdateBackgroundTransform;
+#[derive(Default, Resource)]
+pub enum BackgroundTransformAnimation {
+    #[default]
+    Paused,
+    Active {
+        scale_curve: EasingCurve<Vec3>,
+        translation_curve: EasingCurve<Vec3>,
+        timer: Timer,
+    },
+}
+
+#[derive(Eq, Event, Ord, PartialEq, PartialOrd)]
+pub enum UpdateBackgroundTransform {
+    Immediate,
+    Fast,
+    HubIntro,
+    LevelExit,
+    LevelEntrance,
+}
 
 pub struct BackgroundPlugin;
 
@@ -19,6 +42,7 @@ impl Plugin for BackgroundPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Startup, setup_background)
             .init_resource::<BackgroundAsset>()
+            .init_resource::<BackgroundTransformAnimation>()
             .add_event::<UpdateBackgroundTransform>()
             .add_systems(
                 Update,
@@ -30,6 +54,10 @@ impl Plugin for BackgroundPlugin {
             .add_systems(
                 Update,
                 on_update_background_transform.after(resize_background),
+            )
+            .add_systems(
+                Update,
+                on_background_transform_animation.after(on_update_background_transform),
             );
     }
 }
@@ -69,13 +97,14 @@ fn resize_background(
         (dimensions.height * GRID_SIZE) as f32,
     ));
 
-    commands.send_event(UpdateBackgroundTransform);
+    commands.send_event(UpdateBackgroundTransform::Immediate);
 }
 
 #[expect(clippy::too_many_arguments)]
 fn on_update_background_transform(
     mut reader: EventReader<UpdateBackgroundTransform>,
     mut background_query: Query<&mut Transform, With<Background>>,
+    mut animation: ResMut<BackgroundTransformAnimation>,
     player_query: Query<&Position, With<Player>>,
     window_query: Query<&Window>,
     dimensions: Res<Dimensions>,
@@ -83,20 +112,24 @@ fn on_update_background_transform(
     menu_state: Res<MenuState>,
     ui_state: Res<UiState>,
 ) {
-    let mut empty = true;
-    for _event in reader.read() {
-        empty = false;
-    }
-    if empty {
-        return;
-    }
+    let event = reader.read().reduce(|slowest, event| event.max(slowest));
+    let duration_ms = match event {
+        Some(UpdateBackgroundTransform::Immediate) => 0,
+        Some(UpdateBackgroundTransform::Fast) => 200,
+        Some(UpdateBackgroundTransform::LevelExit | UpdateBackgroundTransform::LevelEntrance) => {
+            400
+        }
+        Some(UpdateBackgroundTransform::HubIntro) => 2000,
+        None => return,
+    };
 
-    let (focus_x, focus_y) = if menu_state.is_in_hub_menu() {
-        (INITIAL_HUB_FOCUS.0, INITIAL_HUB_FOCUS.1)
-    } else if let Ok(player_position) = player_query.get_single() {
-        (player_position.x, player_position.y)
-    } else {
+    let Ok(player_position) = player_query.get_single() else {
         return;
+    };
+    let focus_position = if menu_state.is_in_hub_menu() {
+        (INITIAL_HUB_FOCUS.0, INITIAL_HUB_FOCUS.1)
+    } else {
+        (player_position.x, player_position.y)
     };
 
     let mut transform = background_query
@@ -105,10 +138,108 @@ fn on_update_background_transform(
     let window = window_query
         .get_single()
         .expect("there should be only one window");
-    let window_size = window.size();
 
-    let zoom_factor = ui_state.zoom_factor;
-    transform.scale = Vec3::new(zoom_factor, zoom_factor, 1.);
+    let window_size = window.size();
+    let zoom_factor = if menu_state.is_in_hub_menu() {
+        INITIAL_HUB_ZOOM_FACTOR
+    } else if event == Some(&UpdateBackgroundTransform::LevelExit) {
+        (window_size.x / GRID_SIZE as f32).max(window_size.y / GRID_SIZE as f32)
+    } else {
+        ui_state.zoom_factor
+    };
+    let (scale, translation) = calculate_background_transform_with_zoom_factor(
+        &dimensions,
+        &editor_state,
+        focus_position,
+        &ui_state,
+        window_size,
+        zoom_factor,
+    );
+
+    if duration_ms > 0 {
+        if event == Some(&UpdateBackgroundTransform::LevelEntrance) {
+            let (start_scale, start_translation) = calculate_background_transform_with_zoom_factor(
+                &dimensions,
+                &editor_state,
+                (player_position.x, player_position.y),
+                &ui_state,
+                window_size,
+                (window_size.x / GRID_SIZE as f32).max(window_size.y / GRID_SIZE as f32),
+            );
+            *transform = Transform::from_scale(start_scale).with_translation(start_translation);
+        }
+
+        *animation = BackgroundTransformAnimation::Active {
+            scale_curve: EasingCurve::new(
+                transform.scale,
+                scale,
+                match event {
+                    Some(UpdateBackgroundTransform::LevelExit) => EaseFunction::QuarticIn,
+                    _ => EaseFunction::QuarticOut,
+                },
+            ),
+            translation_curve: EasingCurve::new(
+                transform.translation,
+                translation,
+                match event {
+                    Some(UpdateBackgroundTransform::LevelExit) => EaseFunction::QuarticIn,
+                    Some(UpdateBackgroundTransform::LevelEntrance) => EaseFunction::QuarticOut,
+                    _ => EaseFunction::QuarticInOut,
+                },
+            ),
+            timer: Timer::new(Duration::from_millis(duration_ms), TimerMode::Once),
+        };
+    } else {
+        *transform = Transform::from_scale(scale).with_translation(translation);
+        *animation = BackgroundTransformAnimation::Paused;
+    }
+}
+
+#[expect(clippy::too_many_arguments)]
+fn on_background_transform_animation(
+    mut commands: Commands,
+    mut background_query: Query<&mut Transform, With<Background>>,
+    mut animation: ResMut<BackgroundTransformAnimation>,
+    exit_state: Res<ExitState>,
+    time: Res<Time<Virtual>>,
+) {
+    let BackgroundTransformAnimation::Active {
+        scale_curve,
+        translation_curve,
+        timer,
+    } = animation.as_mut()
+    else {
+        return;
+    };
+
+    timer.tick(time.delta());
+
+    let mut transform = background_query
+        .get_single_mut()
+        .expect("there should be only one background");
+
+    let t = timer.fraction();
+    *transform = Transform::from_scale(scale_curve.sample_unchecked(t))
+        .with_translation(translation_curve.sample_unchecked(t));
+
+    if timer.finished() {
+        *animation = BackgroundTransformAnimation::Paused;
+
+        if let Some(next_level) = exit_state.next_level {
+            commands.trigger(LoadLevel(next_level));
+        }
+    }
+}
+
+fn calculate_background_transform_with_zoom_factor(
+    dimensions: &Dimensions,
+    editor_state: &EditorState,
+    (focus_x, focus_y): (i16, i16),
+    ui_state: &UiState,
+    window_size: Vec2,
+    zoom_factor: f32,
+) -> (Vec3, Vec3) {
+    let scale = Vec3::new(zoom_factor, zoom_factor, 1.);
 
     let editor_open = editor_state.is_open;
     let editor_width = if editor_open { EDITOR_WIDTH as f32 } else { 0. };
@@ -130,5 +261,7 @@ fn on_update_background_transform(
     } else {
         0.
     };
-    transform.translation = Vec3::new(x - if editor_open { 0.5 * editor_width } else { 0. }, y, 1.);
+    let translation = Vec3::new(x - if editor_open { 0.5 * editor_width } else { 0. }, y, 1.);
+
+    (scale, translation)
 }
