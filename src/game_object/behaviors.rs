@@ -171,15 +171,19 @@ pub fn check_for_finished_levels(
 #[expect(clippy::type_complexity)]
 pub fn check_for_key(
     mut commands: Commands,
-    mut openable_query: Query<(Entity, &Position, &Openable, &mut Sprite)>,
+    mut openable_query: Query<(Entity, &Position, &Openable, Option<&Massive>, &mut Sprite)>,
     moved_keys_query: Query<(Entity, &Position), (Changed<Position>, With<Key>)>,
 ) {
     for (key_entity, key_position) in &moved_keys_query {
-        for (openable_entity, openable_position, openable, mut sprite) in &mut openable_query {
-            if matches!(openable, Openable::Key) && key_position == openable_position {
+        for (openable_entity, openable_position, openable, massive, mut sprite) in
+            &mut openable_query
+        {
+            if matches!(openable, Openable::Key)
+                && key_position == openable_position
+                && massive.is_some()
+            {
                 commands.entity(key_entity).despawn();
                 commands.entity(openable_entity).remove::<Massive>();
-                commands.entity(openable_entity).remove::<Openable>();
 
                 if let Some(atlas) = sprite.texture_atlas.as_mut() {
                     atlas.index = 1;
