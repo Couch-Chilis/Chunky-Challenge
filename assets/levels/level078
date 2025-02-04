@@ -2,9 +2,6 @@
 Width=17
 Height=17
 
-[Creature1]
-Position=14,2
-
 [Exit]
 Position=1,1
 
@@ -38,13 +35,14 @@ Position=12,15
 Position=13,3
 Position=14,5;14,7;14,9;14,11;14,13;14,15
 Direction=Left
-Position=2,1;2,9
-Position=3,6
-Position=4,9
-Position=5,9
-Position=6,9
-Position=7,6;7,9
-Position=8,9
+Position=1,4
+Position=2,1;2,4;2,9
+Position=3,4;3,6
+Position=4,4;4,9
+Position=5,4;5,9
+Position=6,4;6,9
+Position=7,4;7,6;7,9
+Position=8,4;8,9
 Position=9,3;9,6
 Position=11,3
 
