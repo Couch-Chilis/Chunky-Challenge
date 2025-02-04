@@ -45,7 +45,7 @@ impl NumberInput {
             TextColor(WHITE),
             font.clone(),
             Node {
-                width: Val::Px(60.),
+                width: Val::Px(90.),
                 ..default()
             },
         ));
