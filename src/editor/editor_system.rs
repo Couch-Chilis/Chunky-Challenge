@@ -265,7 +265,7 @@ fn spawn_selected_object(
                 position,
                 direction,
                 identifier: Some(1),
-                level: Some(1),
+                level: (object_type == ObjectType::Entrance).then_some(1),
                 open: false,
             },
         });

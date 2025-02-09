@@ -46,6 +46,8 @@ pub const LEVELS: &[(u16, &str)] = &[
     (32, include_str!("../assets/levels/level032")),
     (33, include_str!("../assets/levels/level033")),
     (34, include_str!("../assets/levels/level034")),
+    (35, include_str!("../assets/levels/level035")),
+    (42, include_str!("../assets/levels/level042")),
     (56, include_str!("../assets/levels/level056")),
     (57, include_str!("../assets/levels/level057")),
     (66, include_str!("../assets/levels/level066")),
@@ -64,7 +66,6 @@ pub const LEVELS: &[(u16, &str)] = &[
     (86, include_str!("../assets/levels/level086")),
     (87, include_str!("../assets/levels/level087")),
     (88, include_str!("../assets/levels/level088")),
-    (95, include_str!("../assets/levels/level095")),
     (96, include_str!("../assets/levels/level096")),
     (100, include_str!("../assets/levels/level100")),
 ];
