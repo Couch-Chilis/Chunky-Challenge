@@ -242,8 +242,8 @@ fn spawn_selected_object(
         .selected_object_type
         .and_then(EditorObjectType::get_object_type_and_direction)
     {
-        Some((object_type, direction)) => (Some(object_type), Some(direction)),
-        None => (None, None),
+        Some((object_type, direction)) => (Some(object_type), direction),
+        None => (None, Default::default()),
     };
 
     for (entity, existing_object_type, object_position) in &objects {
@@ -569,7 +569,7 @@ pub fn change_level(
         object_type: ObjectType::Entrance,
         position: InitialPositionAndMetadata {
             position: *position,
-            direction: None,
+            direction: Default::default(),
             identifier: None,
             level: Some(entrance.0),
             open: false,

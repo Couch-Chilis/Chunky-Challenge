@@ -57,7 +57,7 @@ struct ChangeZoom(f32);
 
 #[derive(Event)]
 enum GameEvent {
-    MovePlayer(i16, i16),
+    MovePlayer(Direction),
 }
 
 /// Loads the given level.
@@ -318,16 +318,16 @@ fn on_keyboard_input(
         use KeyCode::*;
         match key {
             ArrowUp => {
-                game_events.send(GameEvent::MovePlayer(0, -1));
+                game_events.send(GameEvent::MovePlayer(Direction::Up));
             }
             ArrowRight => {
-                game_events.send(GameEvent::MovePlayer(1, 0));
+                game_events.send(GameEvent::MovePlayer(Direction::Right));
             }
             ArrowDown => {
-                game_events.send(GameEvent::MovePlayer(0, 1));
+                game_events.send(GameEvent::MovePlayer(Direction::Down));
             }
             ArrowLeft => {
-                game_events.send(GameEvent::MovePlayer(-1, 0));
+                game_events.send(GameEvent::MovePlayer(Direction::Left));
             }
             Enter if player_query.get_single().is_err() => {
                 commands.trigger(LoadRelativeLevel(0));
@@ -387,45 +387,31 @@ fn update_entity_directions(mut query: Query<(&Direction, &mut Sprite), Changed<
     }
 }
 
-type PlayerComponents<'a> = (
-    Entity,
-    &'a mut Position,
-    Option<&'a mut Direction>,
-    Option<&'a Weight>,
-);
-
 fn on_game_event(
-    mut commands: Commands,
     mut level_events: EventReader<GameEvent>,
     mut collision_objects_query: Query<CollisionObjectQuery, Without<Player>>,
-    mut player_query: Query<PlayerComponents, With<Player>>,
+    mut player_query: Query<(&mut Position, &mut Direction, Option<&Weight>), With<Player>>,
     mut ui_state: ResMut<UiState>,
     dimensions: Res<Dimensions>,
 ) {
     for event in level_events.read() {
         match event {
-            GameEvent::MovePlayer(dx, dy) => {
-                if let Ok((player, mut position, player_direction, weight)) =
+            GameEvent::MovePlayer(direction) => {
+                if let Ok((mut position, mut player_direction, weight)) =
                     player_query.get_single_mut()
                 {
                     ui_state.camera_offset = Default::default();
 
                     if move_object(
                         &mut position,
-                        (*dx, *dy),
+                        *direction,
                         &dimensions,
                         collision_objects_query.iter_mut().map(Into::into),
                         weight.copied().unwrap_or_default(),
                     )
                     .is_ok()
                     {
-                        if let Ok(direction) = Direction::try_from((*dx, *dy)) {
-                            if let Some(mut player_direction) = player_direction {
-                                *player_direction = direction;
-                            } else {
-                                commands.entity(player).insert(direction);
-                            }
-                        }
+                        *player_direction = *direction;
                     }
                 }
             }
@@ -564,7 +550,7 @@ fn save_level(
     objects_query: Query<(
         &ObjectType,
         &Position,
-        Option<&Direction>,
+        &Direction,
         Option<&Entrance>,
         Option<&Massive>,
         Option<&Openable>,
@@ -585,7 +571,7 @@ fn save_level(
             let positions = objects.entry(*object_type).or_insert(Vec::new());
             positions.push(InitialPositionAndMetadata {
                 position: *position,
-                direction: direction.copied(),
+                direction: *direction,
                 identifier: teleporter.map(|teleporter| teleporter.0),
                 level: entrance.map(|entrance| entrance.0).or_else(|| {
                     openable.and_then(|openable| match openable {

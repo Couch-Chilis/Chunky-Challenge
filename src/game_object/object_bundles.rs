@@ -4,21 +4,25 @@ use crate::levels::InitialPositionAndMetadata;
 
 use super::{
     assets::GameObjectAssets,
-    components::{Exit, Liquid, Massive, Player, Position, Pushable},
-    Animatable, BlocksMovement, BlocksPushes, Deadly, Direction, Entrance, Explosive, Floatable,
-    Immovable, Key, Movable, ObjectType, Openable, Paint, Paintable, Slippery, Teleporter,
-    TransformOnPush, Transporter, Trigger, Volatile, Weight,
+    components::{Exit, Liquid, Massive, Player, Pushable},
+    Animatable, BlocksMovement, BlocksPushes, Deadly, Entrance, Explosive, Floatable, Immovable,
+    Key, Movable, ObjectType, Openable, Paint, Paintable, Slippery, Teleporter, TransformOnPush,
+    Transporter, Trigger, Volatile, Weight,
 };
 
 pub struct BlueBlock;
 
 impl BlueBlock {
-    pub fn spawn(assets: &GameObjectAssets, position: Position) -> impl Bundle {
+    pub fn spawn(
+        assets: &GameObjectAssets,
+        initial_position: InitialPositionAndMetadata,
+    ) -> impl Bundle {
         (
             ObjectType::BlueBlock,
+            initial_position.direction,
             Massive,
             Paintable,
-            position,
+            initial_position.position,
             Pushable,
             Sprite::from_image(assets.blue_block.clone()),
             Transform::from_translation(Vec3::new(0., 0., 3.)),
@@ -30,11 +34,15 @@ impl BlueBlock {
 pub struct BluePaint;
 
 impl BluePaint {
-    pub fn spawn(assets: &GameObjectAssets, position: Position) -> impl Bundle {
+    pub fn spawn(
+        assets: &GameObjectAssets,
+        initial_position: InitialPositionAndMetadata,
+    ) -> impl Bundle {
         (
             ObjectType::BluePaint,
+            initial_position.direction,
             Paint(ObjectType::BlueBlock),
-            position,
+            initial_position.position,
             Pushable,
             Sprite::from_image(assets.blue_paint.clone()),
             Transform::from_translation(Vec3::new(0., 0., 3.)),
@@ -48,16 +56,15 @@ pub struct BouncingBall;
 impl BouncingBall {
     pub fn spawn(
         assets: &GameObjectAssets,
-        position: Position,
-        direction: Direction,
+        initial_position: InitialPositionAndMetadata,
     ) -> impl Bundle {
         (
             ObjectType::BouncingBall,
             BlocksPushes,
             Deadly,
-            direction,
+            initial_position.direction,
             Movable::Bounce,
-            position,
+            initial_position.position,
             Sprite::from_image(assets.bouncing_ball.clone()),
             Transform::from_translation(Vec3::new(0., 0., 4.)),
             Weight::Light,
@@ -68,10 +75,14 @@ impl BouncingBall {
 pub struct Button;
 
 impl Button {
-    pub fn spawn(assets: &GameObjectAssets, position: Position) -> impl Bundle {
+    pub fn spawn(
+        assets: &GameObjectAssets,
+        initial_position: InitialPositionAndMetadata,
+    ) -> impl Bundle {
         (
             ObjectType::Button,
-            position,
+            initial_position.direction,
+            initial_position.position,
             Sprite::from_image(assets.button.clone()),
             Transform::from_translation(Vec3::new(0., 0., 1.)),
             Trigger,
@@ -84,21 +95,20 @@ pub struct Creature1;
 impl Creature1 {
     pub fn spawn(
         assets: &GameObjectAssets,
-        position: Position,
-        direction: Direction,
+        initial_position: InitialPositionAndMetadata,
     ) -> impl Bundle {
         (
             ObjectType::Creature1,
             BlocksPushes,
             Deadly,
-            direction,
+            initial_position.direction,
             Movable::FollowRightHand,
-            position,
+            initial_position.position,
             Sprite::from_atlas_image(
                 assets.creature1.0.clone(),
                 TextureAtlas {
                     layout: assets.creature1.1.clone(),
-                    index: direction as usize,
+                    index: initial_position.direction as usize,
                 },
             ),
             Transform::from_translation(Vec3::new(0., 0., 4.)),
@@ -113,10 +123,14 @@ impl Door {
     pub fn spawn<'a>(
         cb: &'a mut ChildBuilder,
         assets: &GameObjectAssets,
-        position: Position,
         initial_position: InitialPositionAndMetadata,
     ) -> EntityCommands<'a> {
-        let InitialPositionAndMetadata { open, .. } = initial_position;
+        let InitialPositionAndMetadata {
+            direction,
+            open,
+            position,
+            ..
+        } = initial_position;
 
         let openable = Openable::Key;
         let sprite = Sprite::from_atlas_image(
@@ -131,6 +145,7 @@ impl Door {
         if open {
             cb.spawn((
                 ObjectType::Door,
+                direction,
                 Immovable,
                 openable,
                 position,
@@ -152,12 +167,16 @@ impl Door {
 }
 
 impl Entrance {
-    pub fn spawn(assets: &GameObjectAssets, position: Position, level: u16) -> impl Bundle {
+    pub fn spawn(
+        assets: &GameObjectAssets,
+        initial_position: InitialPositionAndMetadata,
+    ) -> impl Bundle {
         (
             ObjectType::Entrance,
             BlocksPushes,
-            Entrance(level),
-            position,
+            initial_position.direction,
+            Entrance(initial_position.level.unwrap_or_default()),
+            initial_position.position,
             Sprite::from_atlas_image(
                 assets.entrance.0.clone(),
                 TextureAtlas {
@@ -171,12 +190,16 @@ impl Entrance {
 }
 
 impl Exit {
-    pub fn spawn(assets: &GameObjectAssets, position: Position) -> impl Bundle {
+    pub fn spawn(
+        assets: &GameObjectAssets,
+        initial_position: InitialPositionAndMetadata,
+    ) -> impl Bundle {
         (
             ObjectType::Exit,
             BlocksPushes,
+            initial_position.direction,
             Exit,
-            position,
+            initial_position.position,
             Sprite::from_image(assets.exit.clone()),
             Transform::from_translation(Vec3::new(0., 0., 1.)),
         )
@@ -186,9 +209,13 @@ impl Exit {
 pub struct Explosion;
 
 impl Explosion {
-    pub fn spawn(assets: &GameObjectAssets, position: Position) -> impl Bundle {
+    pub fn spawn(
+        assets: &GameObjectAssets,
+        initial_position: InitialPositionAndMetadata,
+    ) -> impl Bundle {
         (
-            position,
+            initial_position.direction,
+            initial_position.position,
             Sprite::from_image(assets.explosion.clone()),
             Transform::from_translation(Vec3::new(0., 0., 4.)),
             Volatile,
@@ -202,10 +229,15 @@ impl Gate {
     pub fn spawn<'a>(
         cb: &'a mut ChildBuilder,
         assets: &GameObjectAssets,
-        position: Position,
         initial_position: InitialPositionAndMetadata,
     ) -> EntityCommands<'a> {
-        let InitialPositionAndMetadata { level, open, .. } = initial_position;
+        let InitialPositionAndMetadata {
+            direction,
+            level,
+            open,
+            position,
+            ..
+        } = initial_position;
 
         let openable = if let Some(level) = level {
             Openable::LevelFinished(level)
@@ -224,6 +256,7 @@ impl Gate {
         if open {
             cb.spawn((
                 ObjectType::Gate,
+                direction,
                 Immovable,
                 openable,
                 position,
@@ -233,6 +266,7 @@ impl Gate {
         } else {
             cb.spawn((
                 ObjectType::Gate,
+                direction,
                 Immovable,
                 Massive,
                 openable,
@@ -247,10 +281,14 @@ impl Gate {
 pub struct Grave;
 
 impl Grave {
-    pub fn spawn(assets: &GameObjectAssets, position: Position) -> impl Bundle {
+    pub fn spawn(
+        assets: &GameObjectAssets,
+        initial_position: InitialPositionAndMetadata,
+    ) -> impl Bundle {
         (
+            initial_position.direction,
             Massive,
-            position,
+            initial_position.position,
             Sprite::from_image(assets.grave.clone()),
             Transform::from_translation(Vec3::new(0., 0., 4.)),
         )
@@ -260,11 +298,15 @@ impl Grave {
 pub struct Ice;
 
 impl Ice {
-    pub fn spawn(assets: &GameObjectAssets, position: Position) -> impl Bundle {
+    pub fn spawn(
+        assets: &GameObjectAssets,
+        initial_position: InitialPositionAndMetadata,
+    ) -> impl Bundle {
         (
             ObjectType::Ice,
+            initial_position.direction,
             BlocksMovement::Enabled,
-            position,
+            initial_position.position,
             Slippery,
             Sprite::from_image(assets.ice.clone()),
             Transform::from_translation(Vec3::new(0., 0., 1.)),
@@ -273,11 +315,15 @@ impl Ice {
 }
 
 impl Key {
-    pub fn spawn(assets: &GameObjectAssets, position: Position) -> impl Bundle {
+    pub fn spawn(
+        assets: &GameObjectAssets,
+        initial_position: InitialPositionAndMetadata,
+    ) -> impl Bundle {
         (
             ObjectType::Key,
+            initial_position.direction,
             Key,
-            position,
+            initial_position.position,
             Pushable,
             Sprite::from_image(assets.key.clone()),
             Transform::from_translation(Vec3::new(0., 0., 2.)),
@@ -289,11 +335,15 @@ impl Key {
 pub struct Mine;
 
 impl Mine {
-    pub fn spawn(assets: &GameObjectAssets, position: Position) -> impl Bundle {
+    pub fn spawn(
+        assets: &GameObjectAssets,
+        initial_position: InitialPositionAndMetadata,
+    ) -> impl Bundle {
         (
             ObjectType::Mine,
+            initial_position.direction,
             Explosive,
-            position,
+            initial_position.position,
             Sprite::from_image(assets.mine.clone()),
             Transform::from_translation(Vec3::new(0., 0., 1.)),
         )
@@ -301,12 +351,16 @@ impl Mine {
 }
 
 impl Player {
-    pub fn spawn(assets: &GameObjectAssets, position: Position) -> impl Bundle {
+    pub fn spawn(
+        assets: &GameObjectAssets,
+        initial_position: InitialPositionAndMetadata,
+    ) -> impl Bundle {
         (
             ObjectType::Player,
             BlocksPushes,
+            initial_position.direction,
             Player,
-            position,
+            initial_position.position,
             Sprite::from_image(assets.player.clone()),
             Transform::from_translation(Vec3::new(0., 0., 4.)),
             Weight::Heavy,
@@ -317,12 +371,16 @@ impl Player {
 pub struct PurpleBlock;
 
 impl PurpleBlock {
-    pub fn spawn(assets: &GameObjectAssets, position: Position) -> impl Bundle {
+    pub fn spawn(
+        assets: &GameObjectAssets,
+        initial_position: InitialPositionAndMetadata,
+    ) -> impl Bundle {
         (
             ObjectType::PurpleBlock,
+            initial_position.direction,
             Massive,
             Paintable,
-            position,
+            initial_position.position,
             Pushable,
             Sprite::from_image(assets.purple_block.clone()),
             Transform::from_translation(Vec3::new(0., 0., 3.)),
@@ -335,11 +393,15 @@ impl PurpleBlock {
 pub struct PurplePaint;
 
 impl PurplePaint {
-    pub fn spawn(assets: &GameObjectAssets, position: Position) -> impl Bundle {
+    pub fn spawn(
+        assets: &GameObjectAssets,
+        initial_position: InitialPositionAndMetadata,
+    ) -> impl Bundle {
         (
             ObjectType::PurplePaint,
+            initial_position.direction,
             Paint(ObjectType::PurpleBlock),
-            position,
+            initial_position.position,
             Pushable,
             Sprite::from_image(assets.purple_paint.clone()),
             Transform::from_translation(Vec3::new(0., 0., 3.)),
@@ -351,11 +413,15 @@ impl PurplePaint {
 pub struct Raft;
 
 impl Raft {
-    pub fn spawn(assets: &GameObjectAssets, position: Position) -> impl Bundle {
+    pub fn spawn(
+        assets: &GameObjectAssets,
+        initial_position: InitialPositionAndMetadata,
+    ) -> impl Bundle {
         (
             ObjectType::Raft,
+            initial_position.direction,
             Floatable,
-            position,
+            initial_position.position,
             Pushable,
             Sprite::from_image(assets.raft.clone()),
             Transform::from_translation(Vec3::new(0., 0., 2.)),
@@ -367,12 +433,16 @@ impl Raft {
 pub struct RedBlock;
 
 impl RedBlock {
-    pub fn spawn(assets: &GameObjectAssets, position: Position) -> impl Bundle {
+    pub fn spawn(
+        assets: &GameObjectAssets,
+        initial_position: InitialPositionAndMetadata,
+    ) -> impl Bundle {
         (
             ObjectType::RedBlock,
+            initial_position.direction,
             Massive,
             Paintable,
-            position,
+            initial_position.position,
             Sprite::from_image(assets.red_block.clone()),
             Transform::from_translation(Vec3::new(0., 0., 2.)),
         )
@@ -382,11 +452,15 @@ impl RedBlock {
 pub struct RedPaint;
 
 impl RedPaint {
-    pub fn spawn(assets: &GameObjectAssets, position: Position) -> impl Bundle {
+    pub fn spawn(
+        assets: &GameObjectAssets,
+        initial_position: InitialPositionAndMetadata,
+    ) -> impl Bundle {
         (
             ObjectType::RedPaint,
+            initial_position.direction,
             Paint(ObjectType::RedBlock),
-            position,
+            initial_position.position,
             Pushable,
             Sprite::from_image(assets.red_paint.clone()),
             Transform::from_translation(Vec3::new(0., 0., 3.)),
@@ -398,10 +472,14 @@ impl RedPaint {
 pub struct Splash;
 
 impl Splash {
-    pub fn spawn(assets: &GameObjectAssets, position: Position) -> impl Bundle {
+    pub fn spawn(
+        assets: &GameObjectAssets,
+        initial_position: InitialPositionAndMetadata,
+    ) -> impl Bundle {
         (
+            initial_position.direction,
             Floatable,
-            position,
+            initial_position.position,
             Sprite::from_image(assets.splash.clone()),
             Transform::from_translation(Vec3::new(0., 0., 4.)),
             Volatile,
@@ -410,13 +488,17 @@ impl Splash {
 }
 
 impl Teleporter {
-    pub fn spawn(assets: &GameObjectAssets, position: Position, identifier: u16) -> impl Bundle {
+    pub fn spawn(
+        assets: &GameObjectAssets,
+        initial_position: InitialPositionAndMetadata,
+    ) -> impl Bundle {
         (
             ObjectType::Teleporter,
-            position,
+            initial_position.direction,
+            initial_position.position,
             Sprite::from_image(assets.teleporter.clone()),
             Transform::from_translation(Vec3::new(0., 0., 1.)),
-            Teleporter(identifier),
+            Teleporter(initial_position.identifier.unwrap_or_default()),
         )
     }
 }
@@ -424,14 +506,13 @@ impl Teleporter {
 impl Transporter {
     pub fn spawn(
         assets: &GameObjectAssets,
-        position: Position,
-        direction: Direction,
+        initial_position: InitialPositionAndMetadata,
     ) -> impl Bundle {
         (
             ObjectType::Transporter,
             BlocksMovement::Enabled,
-            direction,
-            position,
+            initial_position.direction,
+            initial_position.position,
             Sprite::from_atlas_image(
                 assets.transporter.0.clone(),
                 TextureAtlas {
@@ -448,12 +529,16 @@ impl Transporter {
 pub struct Water;
 
 impl Water {
-    pub fn spawn(assets: &GameObjectAssets, position: Position) -> impl Bundle {
+    pub fn spawn(
+        assets: &GameObjectAssets,
+        initial_position: InitialPositionAndMetadata,
+    ) -> impl Bundle {
         (
             ObjectType::Water,
             Animatable { num_frames: 3 },
+            initial_position.direction,
             Liquid,
-            position,
+            initial_position.position,
             Sprite::from_atlas_image(
                 assets.water.0.clone(),
                 TextureAtlas {
@@ -469,12 +554,16 @@ impl Water {
 pub struct YellowBlock;
 
 impl YellowBlock {
-    pub fn spawn(assets: &GameObjectAssets, position: Position) -> impl Bundle {
+    pub fn spawn(
+        assets: &GameObjectAssets,
+        initial_position: InitialPositionAndMetadata,
+    ) -> impl Bundle {
         (
             ObjectType::YellowBlock,
+            initial_position.direction,
             Massive,
             Paintable,
-            position,
+            initial_position.position,
             Pushable,
             Sprite::from_image(assets.yellow_block.clone()),
             Transform::from_translation(Vec3::new(0., 0., 3.)),

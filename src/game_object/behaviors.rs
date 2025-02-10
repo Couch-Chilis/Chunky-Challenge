@@ -271,10 +271,7 @@ pub fn check_for_paint(
 #[expect(clippy::type_complexity)]
 pub fn check_for_transform_on_push(
     mut commands: Commands,
-    transform_query: Query<
-        (Entity, Option<&Direction>, Ref<Position>, &TransformOnPush),
-        With<Pushable>,
-    >,
+    transform_query: Query<(Entity, &Direction, Ref<Position>, &TransformOnPush), With<Pushable>>,
     editor_state: Res<EditorState>,
 ) {
     if editor_state.is_open {
@@ -288,7 +285,7 @@ pub fn check_for_transform_on_push(
                 object_type: *object_type,
                 position: InitialPositionAndMetadata {
                     position: *position,
-                    direction: direction.copied(),
+                    direction: *direction,
                     identifier: None,
                     level: None,
                     open: false,
@@ -309,12 +306,7 @@ pub fn check_for_slippery_and_transporter(
         (With<Transporter>, Without<Slippery>),
     >,
     mut potential_transportees_query: Query<
-        (
-            Entity,
-            Option<&Direction>,
-            Option<&Immovable>,
-            CollisionObjectQuery,
-        ),
+        (Entity, Option<&Immovable>, CollisionObjectQuery),
         (Without<Slippery>, Without<Transporter>),
     >,
     mut timer: ResMut<TransporterTimer>,
@@ -330,77 +322,66 @@ pub fn check_for_slippery_and_transporter(
     for (slippery_position, mut blocks_movement) in &mut slippery_query {
         let (mut transportees, collision_objects): (Vec<_>, Vec<_>) = potential_transportees_query
             .iter_mut()
-            .map(|(entity, direction, immovable, collision_object)| {
-                (
-                    entity,
-                    direction,
-                    immovable,
-                    CollisionObject::from(collision_object),
-                )
+            .map(|(entity, immovable, collision_object)| {
+                (entity, immovable, CollisionObject::from(collision_object))
             })
             .partition(|(.., immovable, object)| {
                 object.has_position(*slippery_position) && immovable.is_none()
             });
         transportees.retain(|(entity, ..)| !already_moved.contains(entity));
 
-        if let Some((transportee, transportee_direction, .., CollisionObject { position, .. })) =
-            transportees.first_mut()
-        {
-            let Some(direction) = transportee_direction else {
-                continue;
-            };
-
-            if move_object(
-                position,
-                direction.as_delta(),
+        if let Some((transportee, .., object)) = transportees.first_mut() {
+            match move_object(
+                &mut object.position,
+                *object.direction,
                 &dimensions,
                 collision_objects.into_iter().map(|(.., object)| object),
-                Weight::None,
-            )
-            .is_err_and(MoveObjectError::is_collision)
-            {
-                // If an object on a slippery entity cannot be moved, the
-                // slippery entity's [BlocksMovement] component is disabled
-                // until the object is moved away.
-                *blocks_movement = BlocksMovement::Disabled;
+                object.weight.copied().unwrap_or_default(),
+            ) {
+                Ok(()) => {
+                    already_moved.insert(*transportee);
+                }
+                Err(err) if err.is_collision() => {
+                    // If an object on a slippery entity cannot be moved, the
+                    // slippery entity's [BlocksMovement] component is disabled
+                    // until the object is moved away.
+                    *blocks_movement = BlocksMovement::Disabled;
+                }
+                Err(_) => {}
             }
-            already_moved.insert(*transportee);
         }
     }
 
     for (transporter_position, direction, mut blocks_movement) in &mut transporter_query {
         let (mut transportees, collision_objects): (Vec<_>, Vec<_>) = potential_transportees_query
             .iter_mut()
-            .map(|(entity, direction, immovable, collision_object)| {
-                (
-                    entity,
-                    direction,
-                    immovable,
-                    CollisionObject::from(collision_object),
-                )
+            .map(|(entity, immovable, collision_object)| {
+                (entity, immovable, CollisionObject::from(collision_object))
             })
             .partition(|(.., immovable, object)| {
                 object.has_position(*transporter_position) && immovable.is_none()
             });
         transportees.retain(|(entity, ..)| !already_moved.contains(entity));
 
-        if let Some((transportee, .., CollisionObject { position, .. })) = transportees.first_mut()
-        {
-            if move_object(
-                position,
-                direction.as_delta(),
+        if let Some((transportee, .., object)) = transportees.first_mut() {
+            match move_object(
+                &mut object.position,
+                *direction,
                 &dimensions,
                 collision_objects.into_iter().map(|(.., object)| object),
-                Weight::None,
-            )
-            .is_err_and(MoveObjectError::is_collision)
-            {
-                // If an object on a transporter cannot be moved, the
-                // transporter's [BlocksMovement] component is disabled until
-                // the object is moved away.
-                *blocks_movement = BlocksMovement::Disabled;
+                object.weight.copied().unwrap_or_default(),
+            ) {
+                Ok(()) => {
+                    already_moved.insert(*transportee);
+                }
+                Err(err) if err.is_collision() => {
+                    // If an object on a transporter cannot be moved, the
+                    // transporter's [BlocksMovement] component is disabled until
+                    // the object is moved away.
+                    *blocks_movement = BlocksMovement::Disabled;
+                }
+                Err(_) => {}
             }
-            already_moved.insert(*transportee);
         }
     }
 }
@@ -545,7 +526,7 @@ pub fn move_objects(
             Movable::Bounce => {
                 if move_object(
                     &mut position,
-                    direction.as_delta(),
+                    *direction,
                     &dimensions,
                     collision_objects_query.iter_mut().map(Into::into),
                     weight.copied().unwrap_or_default(),
@@ -558,7 +539,7 @@ pub fn move_objects(
             Movable::FollowRightHand => {
                 let move_result = move_object(
                     &mut position,
-                    direction.right_hand().as_delta(),
+                    direction.right_hand(),
                     &dimensions,
                     collision_objects_query.iter_mut().map(Into::into),
                     weight.copied().unwrap_or_default(),
@@ -570,7 +551,7 @@ pub fn move_objects(
                     Err(err) if err.is_collision() => {
                         if move_object(
                             &mut position,
-                            direction.as_delta(),
+                            *direction,
                             &dimensions,
                             collision_objects_query.iter_mut().map(Into::into),
                             weight.copied().unwrap_or_default(),
@@ -605,11 +586,12 @@ impl MoveObjectError {
 
 pub fn move_object<'a>(
     object_position: &mut Mut<Position>,
-    (dx, dy): (i16, i16),
+    direction: Direction,
     dimensions: &Dimensions,
     collision_objects: impl Iterator<Item = CollisionObject<'a>>,
     max_weight: Weight,
 ) -> Result<(), MoveObjectError> {
+    let (dx, dy) = direction.as_delta();
     let new_x = object_position.x + dx;
     let new_y = object_position.y + dy;
     if !dimensions.contains((new_x, new_y).into()) {
@@ -691,9 +673,10 @@ pub fn move_object<'a>(
     }
 
     for index in pushed_object_indices {
-        let position = &mut collision_objects[index].position;
-        position.x += dx;
-        position.y += dy;
+        let object = &mut collision_objects[index];
+        object.position.x += dx;
+        object.position.y += dy;
+        *object.direction = direction;
     }
 
     for collission_object in &mut collision_objects {

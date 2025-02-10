@@ -5,6 +5,7 @@ use super::{components::*, ObjectType};
 pub type CollisionObjectQuery<'a> = (
     Option<Mut<'a, BlocksMovement>>,
     Option<&'a BlocksPushes>,
+    Mut<'a, Direction>,
     Option<&'a Key>,
     Option<&'a Massive>,
     &'a ObjectType,
@@ -19,6 +20,7 @@ pub type CollisionObjectQuery<'a> = (
 pub struct CollisionObject<'a> {
     pub(super) blocks_movement: Option<Mut<'a, BlocksMovement>>,
     blocks_pushes: Option<&'a BlocksPushes>,
+    pub(super) direction: Mut<'a, Direction>,
     key: Option<&'a Key>,
     massive: Option<&'a Massive>,
     object_type: &'a ObjectType,
@@ -27,7 +29,7 @@ pub struct CollisionObject<'a> {
     paintable: Option<&'a Paintable>,
     pub(super) position: Mut<'a, Position>,
     pushable: Option<&'a Pushable>,
-    weight: Option<&'a Weight>,
+    pub(super) weight: Option<&'a Weight>,
 }
 
 impl<'a> From<CollisionObjectQuery<'a>> for CollisionObject<'a> {
@@ -35,6 +37,7 @@ impl<'a> From<CollisionObjectQuery<'a>> for CollisionObject<'a> {
         let (
             blocks_movement,
             blocks_pushes,
+            direction,
             key,
             massive,
             object_type,
@@ -49,6 +52,7 @@ impl<'a> From<CollisionObjectQuery<'a>> for CollisionObject<'a> {
         Self {
             blocks_movement,
             blocks_pushes,
+            direction,
             key,
             massive,
             object_type,

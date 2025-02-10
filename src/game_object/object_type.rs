@@ -10,11 +10,12 @@ use crate::{
 use super::{
     assets::GameObjectAssets,
     object_bundles::{BlueBlock, BouncingBall, Creature1, Raft, RedBlock, Water},
-    BluePaint, Button, Door, Entrance, Exit, Explosion, Gate, Grave, Ice, Key, Mine, Player,
-    PurpleBlock, PurplePaint, RedPaint, Splash, Teleporter, Transporter, YellowBlock,
+    BluePaint, Button, Direction, Door, Entrance, Exit, Explosion, Gate, Grave, Ice, Key, Mine,
+    Player, PurpleBlock, PurplePaint, RedPaint, Splash, Teleporter, Transporter, YellowBlock,
 };
 
 #[derive(Clone, Component, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
+#[require(Direction)]
 pub enum ObjectType {
     BlueBlock,
     BluePaint,
@@ -134,32 +135,19 @@ pub fn spawn_object_of_type(
     object_type: ObjectType,
     initial_position: InitialPositionAndMetadata,
 ) {
-    let position = initial_position.position;
-
     match object_type {
-        ObjectType::BlueBlock => cb.spawn(BlueBlock::spawn(assets, position)),
-        ObjectType::BluePaint => cb.spawn(BluePaint::spawn(assets, position)),
-        ObjectType::BouncingBall => cb.spawn(BouncingBall::spawn(
-            assets,
-            position,
-            initial_position.direction.unwrap_or_default(),
-        )),
-        ObjectType::Button => cb.spawn(Button::spawn(assets, position)),
-        ObjectType::Creature1 => cb.spawn(Creature1::spawn(
-            assets,
-            position,
-            initial_position.direction.unwrap_or_default(),
-        )),
-        ObjectType::Door => Door::spawn(cb, assets, position, initial_position),
+        ObjectType::BlueBlock => cb.spawn(BlueBlock::spawn(assets, initial_position)),
+        ObjectType::BluePaint => cb.spawn(BluePaint::spawn(assets, initial_position)),
+        ObjectType::BouncingBall => cb.spawn(BouncingBall::spawn(assets, initial_position)),
+        ObjectType::Button => cb.spawn(Button::spawn(assets, initial_position)),
+        ObjectType::Creature1 => cb.spawn(Creature1::spawn(assets, initial_position)),
+        ObjectType::Door => Door::spawn(cb, assets, initial_position),
         ObjectType::Entrance => {
-            let mut cb = cb.spawn(Entrance::spawn(
-                assets,
-                position,
-                initial_position.level.unwrap_or_default(),
-            ));
+            let level_label = initial_position.level.unwrap_or_default().to_string();
+            let mut cb = cb.spawn(Entrance::spawn(assets, initial_position));
             cb.with_children(|cb| {
                 cb.spawn((
-                    Text2d::new(initial_position.level.unwrap_or_default().to_string()),
+                    Text2d::new(level_label),
                     TextColor(ENTRANCE_TEXT),
                     TextFont::from_font(fonts.poppins_light.clone()).with_font_size(24.),
                     Transform::from_translation(Vec3::new(0., 0., 1.)),
@@ -167,31 +155,23 @@ pub fn spawn_object_of_type(
             });
             cb
         }
-        ObjectType::Exit => cb.spawn(Exit::spawn(assets, position)),
-        ObjectType::Explosion => cb.spawn(Explosion::spawn(assets, position)),
-        ObjectType::Gate => Gate::spawn(cb, assets, position, initial_position),
-        ObjectType::Grave => cb.spawn(Grave::spawn(assets, position)),
-        ObjectType::Ice => cb.spawn(Ice::spawn(assets, position)),
-        ObjectType::Key => cb.spawn(Key::spawn(assets, position)),
-        ObjectType::Mine => cb.spawn(Mine::spawn(assets, position)),
-        ObjectType::Player => cb.spawn(Player::spawn(assets, position)),
-        ObjectType::PurpleBlock => cb.spawn(PurpleBlock::spawn(assets, position)),
-        ObjectType::PurplePaint => cb.spawn(PurplePaint::spawn(assets, position)),
-        ObjectType::Raft => cb.spawn(Raft::spawn(assets, position)),
-        ObjectType::RedBlock => cb.spawn(RedBlock::spawn(assets, position)),
-        ObjectType::RedPaint => cb.spawn(RedPaint::spawn(assets, position)),
-        ObjectType::Splash => cb.spawn(Splash::spawn(assets, position)),
-        ObjectType::Teleporter => cb.spawn(Teleporter::spawn(
-            assets,
-            position,
-            initial_position.identifier.unwrap_or_default(),
-        )),
-        ObjectType::Transporter => cb.spawn(Transporter::spawn(
-            assets,
-            position,
-            initial_position.direction.unwrap_or_default(),
-        )),
-        ObjectType::Water => cb.spawn(Water::spawn(assets, position)),
-        ObjectType::YellowBlock => cb.spawn(YellowBlock::spawn(assets, position)),
+        ObjectType::Exit => cb.spawn(Exit::spawn(assets, initial_position)),
+        ObjectType::Explosion => cb.spawn(Explosion::spawn(assets, initial_position)),
+        ObjectType::Gate => Gate::spawn(cb, assets, initial_position),
+        ObjectType::Grave => cb.spawn(Grave::spawn(assets, initial_position)),
+        ObjectType::Ice => cb.spawn(Ice::spawn(assets, initial_position)),
+        ObjectType::Key => cb.spawn(Key::spawn(assets, initial_position)),
+        ObjectType::Mine => cb.spawn(Mine::spawn(assets, initial_position)),
+        ObjectType::Player => cb.spawn(Player::spawn(assets, initial_position)),
+        ObjectType::PurpleBlock => cb.spawn(PurpleBlock::spawn(assets, initial_position)),
+        ObjectType::PurplePaint => cb.spawn(PurplePaint::spawn(assets, initial_position)),
+        ObjectType::Raft => cb.spawn(Raft::spawn(assets, initial_position)),
+        ObjectType::RedBlock => cb.spawn(RedBlock::spawn(assets, initial_position)),
+        ObjectType::RedPaint => cb.spawn(RedPaint::spawn(assets, initial_position)),
+        ObjectType::Splash => cb.spawn(Splash::spawn(assets, initial_position)),
+        ObjectType::Teleporter => cb.spawn(Teleporter::spawn(assets, initial_position)),
+        ObjectType::Transporter => cb.spawn(Transporter::spawn(assets, initial_position)),
+        ObjectType::Water => cb.spawn(Water::spawn(assets, initial_position)),
+        ObjectType::YellowBlock => cb.spawn(YellowBlock::spawn(assets, initial_position)),
     };
 }
