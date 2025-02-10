@@ -292,7 +292,7 @@ impl Player {
             Player,
             position,
             Sprite::from_image(assets.player.clone()),
-            Transform::from_translation(Vec3::new(0., 0., 3.)),
+            Transform::from_translation(Vec3::new(0., 0., 4.)),
             Weight::Heavy,
         )
     }
