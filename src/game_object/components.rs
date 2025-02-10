@@ -162,6 +162,10 @@ pub struct Explosive;
 #[derive(Component, Debug)]
 pub struct Floatable;
 
+/// Cannot be moved, not even when on a transporter.
+#[derive(Component, Debug)]
+pub struct Immovable;
+
 /// Entity acts as a key for opening [Openable::Key] entities.
 #[derive(Component, Debug)]
 pub struct Key;
@@ -176,8 +180,8 @@ pub struct Liquid;
 
 /// A massive entity will prevent other entities from moving onto it.
 ///
-/// An entity that is both massive and [Movable] will move first, but prevent
-/// other entities from moving when it cannot be pushed further.
+/// An entity that is both massive and [Pushable] can still be pushed, but will
+/// prevent other entities from moving onto it when it cannot be pushed further.
 #[derive(Component, Debug)]
 pub struct Massive;
 

@@ -309,7 +309,12 @@ pub fn check_for_slippery_and_transporter(
         (With<Transporter>, Without<Slippery>),
     >,
     mut potential_transportees_query: Query<
-        (Entity, Option<&Direction>, CollisionObjectQuery),
+        (
+            Entity,
+            Option<&Direction>,
+            Option<&Immovable>,
+            CollisionObjectQuery,
+        ),
         (Without<Slippery>, Without<Transporter>),
     >,
     mut timer: ResMut<TransporterTimer>,
@@ -325,13 +330,20 @@ pub fn check_for_slippery_and_transporter(
     for (slippery_position, mut blocks_movement) in &mut slippery_query {
         let (mut transportees, collision_objects): (Vec<_>, Vec<_>) = potential_transportees_query
             .iter_mut()
-            .map(|(entity, direction, collision_object)| {
-                (entity, direction, CollisionObject::from(collision_object))
+            .map(|(entity, direction, immovable, collision_object)| {
+                (
+                    entity,
+                    direction,
+                    immovable,
+                    CollisionObject::from(collision_object),
+                )
             })
-            .partition(|(.., object)| object.has_position(*slippery_position));
+            .partition(|(.., immovable, object)| {
+                object.has_position(*slippery_position) && immovable.is_none()
+            });
         transportees.retain(|(entity, ..)| !already_moved.contains(entity));
 
-        if let Some((transportee, transportee_direction, CollisionObject { position, .. })) =
+        if let Some((transportee, transportee_direction, .., CollisionObject { position, .. })) =
             transportees.first_mut()
         {
             let Some(direction) = transportee_direction else {
@@ -359,10 +371,17 @@ pub fn check_for_slippery_and_transporter(
     for (transporter_position, direction, mut blocks_movement) in &mut transporter_query {
         let (mut transportees, collision_objects): (Vec<_>, Vec<_>) = potential_transportees_query
             .iter_mut()
-            .map(|(entity, direction, collision_object)| {
-                (entity, direction, CollisionObject::from(collision_object))
+            .map(|(entity, direction, immovable, collision_object)| {
+                (
+                    entity,
+                    direction,
+                    immovable,
+                    CollisionObject::from(collision_object),
+                )
             })
-            .partition(|(.., object)| object.has_position(*transporter_position));
+            .partition(|(.., immovable, object)| {
+                object.has_position(*transporter_position) && immovable.is_none()
+            });
         transportees.retain(|(entity, ..)| !already_moved.contains(entity));
 
         if let Some((transportee, .., CollisionObject { position, .. })) = transportees.first_mut()

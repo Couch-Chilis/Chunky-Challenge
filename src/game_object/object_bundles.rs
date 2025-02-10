@@ -6,8 +6,8 @@ use super::{
     assets::GameObjectAssets,
     components::{Exit, Liquid, Massive, Player, Position, Pushable},
     Animatable, BlocksMovement, BlocksPushes, Deadly, Direction, Entrance, Explosive, Floatable,
-    Key, Movable, ObjectType, Openable, Paint, Paintable, Slippery, Teleporter, TransformOnPush,
-    Transporter, Trigger, Volatile, Weight,
+    Immovable, Key, Movable, ObjectType, Openable, Paint, Paintable, Slippery, Teleporter,
+    TransformOnPush, Transporter, Trigger, Volatile, Weight,
 };
 
 pub struct BlueBlock;
@@ -129,10 +129,18 @@ impl Door {
         let transform = Transform::from_translation(Vec3::new(0., 0., 5.));
 
         if open {
-            cb.spawn((ObjectType::Door, openable, position, sprite, transform))
+            cb.spawn((
+                ObjectType::Door,
+                Immovable,
+                openable,
+                position,
+                sprite,
+                transform,
+            ))
         } else {
             cb.spawn((
                 ObjectType::Door,
+                Immovable,
                 Massive,
                 openable,
                 position,
@@ -214,10 +222,18 @@ impl Gate {
         let transform = Transform::from_translation(Vec3::new(0., 0., 5.));
 
         if open {
-            cb.spawn((ObjectType::Gate, openable, position, sprite, transform))
+            cb.spawn((
+                ObjectType::Gate,
+                Immovable,
+                openable,
+                position,
+                sprite,
+                transform,
+            ))
         } else {
             cb.spawn((
                 ObjectType::Gate,
+                Immovable,
                 Massive,
                 openable,
                 position,
