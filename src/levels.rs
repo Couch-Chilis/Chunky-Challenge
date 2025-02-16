@@ -55,6 +55,7 @@ pub const LEVELS: &[(u16, &str)] = &[
     (41, include_str!("../assets/levels/level041")),
     (42, include_str!("../assets/levels/level042")),
     (43, include_str!("../assets/levels/level043")),
+    (44, include_str!("../assets/levels/level044")),
     (56, include_str!("../assets/levels/level056")),
     (57, include_str!("../assets/levels/level057")),
     (66, include_str!("../assets/levels/level066")),
@@ -147,7 +148,7 @@ pub struct Level {
 impl Level {
     pub fn load(content: &str) -> Self {
         let mut dimensions = Dimensions::default();
-        let mut direction = None;
+        let mut direction = Direction::default();
         let mut identifier = None;
         let mut level = None;
         let mut open = false;
@@ -158,7 +159,7 @@ impl Level {
             let line = line.trim();
 
             if line.starts_with('[') && line.ends_with(']') {
-                direction = None;
+                direction = Direction::default();
                 identifier = None;
                 level = None;
                 open = false;
@@ -224,7 +225,7 @@ impl Level {
                 }
             } else if key == "Direction" {
                 match Direction::from_str(value) {
-                    Ok(value) => direction = Some(value),
+                    Ok(value) => direction = value,
                     Err(_) => {
                         println!("Unknown direction: {value}");
                     }
@@ -291,15 +292,13 @@ impl Level {
                 open,
             } in positions
             {
-                if let Some(direction) = direction {
-                    if direction != current_direction {
-                        if !content.ends_with('\n') {
-                            content.push('\n');
-                        }
-
-                        writeln!(content, "Direction={direction}").expect("writing failed");
-                        current_direction = direction;
+                if direction != current_direction {
+                    if !content.ends_with('\n') {
+                        content.push('\n');
                     }
+
+                    writeln!(content, "Direction={direction}").expect("writing failed");
+                    current_direction = direction;
                 }
 
                 if let Some(identifier) = identifier {
@@ -375,7 +374,7 @@ impl Dimensions {
 #[derive(Clone)]
 pub struct InitialPositionAndMetadata {
     pub position: Position,
-    pub direction: Option<Direction>,
+    pub direction: Direction,
     pub identifier: Option<u16>,
     pub level: Option<u16>,
     pub open: bool,
@@ -385,7 +384,7 @@ impl From<&Position> for InitialPositionAndMetadata {
     fn from(position: &Position) -> Self {
         Self {
             position: *position,
-            direction: None,
+            direction: Direction::default(),
             identifier: None,
             level: None,
             open: false,

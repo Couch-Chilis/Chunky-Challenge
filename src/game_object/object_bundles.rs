@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::levels::InitialPositionAndMetadata;
+use crate::{constants::ENTRANCE_TEXT, fonts::Fonts, levels::InitialPositionAndMetadata};
 
 use super::{
     assets::GameObjectAssets,
@@ -167,11 +167,13 @@ impl Door {
 }
 
 impl Entrance {
-    pub fn spawn(
+    pub fn spawn<'a>(
+        cb: &'a mut ChildBuilder,
         assets: &GameObjectAssets,
+        fonts: &Fonts,
         initial_position: InitialPositionAndMetadata,
-    ) -> impl Bundle {
-        (
+    ) -> EntityCommands<'a> {
+        let mut commands = cb.spawn((
             ObjectType::Entrance,
             BlocksPushes,
             initial_position.direction,
@@ -185,7 +187,16 @@ impl Entrance {
                 },
             ),
             Transform::from_translation(Vec3::new(0., 0., 1.)),
-        )
+        ));
+        commands.with_children(|cb| {
+            cb.spawn((
+                Text2d::new(initial_position.level.unwrap_or_default().to_string()),
+                TextColor(ENTRANCE_TEXT),
+                TextFont::from_font(fonts.poppins_light.clone()).with_font_size(24.),
+                Transform::from_translation(Vec3::new(0., 0., 1.)),
+            ));
+        });
+        commands
     }
 }
 

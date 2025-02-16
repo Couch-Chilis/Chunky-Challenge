@@ -3,9 +3,7 @@ use std::str::FromStr;
 
 use bevy::prelude::*;
 
-use crate::{
-    errors::UnknownObjectType, fonts::Fonts, levels::InitialPositionAndMetadata, ENTRANCE_TEXT,
-};
+use crate::{errors::UnknownObjectType, fonts::Fonts, levels::InitialPositionAndMetadata};
 
 use super::{
     assets::GameObjectAssets,
@@ -142,19 +140,7 @@ pub fn spawn_object_of_type(
         ObjectType::Button => cb.spawn(Button::spawn(assets, initial_position)),
         ObjectType::Creature1 => cb.spawn(Creature1::spawn(assets, initial_position)),
         ObjectType::Door => Door::spawn(cb, assets, initial_position),
-        ObjectType::Entrance => {
-            let level_label = initial_position.level.unwrap_or_default().to_string();
-            let mut cb = cb.spawn(Entrance::spawn(assets, initial_position));
-            cb.with_children(|cb| {
-                cb.spawn((
-                    Text2d::new(level_label),
-                    TextColor(ENTRANCE_TEXT),
-                    TextFont::from_font(fonts.poppins_light.clone()).with_font_size(24.),
-                    Transform::from_translation(Vec3::new(0., 0., 1.)),
-                ));
-            });
-            cb
-        }
+        ObjectType::Entrance => Entrance::spawn(cb, assets, fonts, initial_position),
         ObjectType::Exit => cb.spawn(Exit::spawn(assets, initial_position)),
         ObjectType::Explosion => cb.spawn(Explosion::spawn(assets, initial_position)),
         ObjectType::Gate => Gate::spawn(cb, assets, initial_position),
