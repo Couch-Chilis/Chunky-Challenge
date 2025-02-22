@@ -126,30 +126,24 @@ pub fn check_for_explosive(
     }
 }
 
-#[expect(clippy::type_complexity)]
 pub fn check_for_finished_levels(
     mut commands: Commands,
-    mut query: Query<(
-        Entity,
-        Option<&Entrance>,
-        Option<&Openable>,
-        Option<&Massive>,
-        &mut Sprite,
-    )>,
+    mut entrance_query: Query<(&Entrance, &mut Sprite), Without<Openable>>,
+    mut openable_query: Query<
+        (Entity, &Openable, Option<&Massive>, &mut Sprite),
+        Without<Entrance>,
+    >,
     game_state: Res<GameState>,
 ) {
-    if !game_state.is_changed() {
-        return;
-    }
-
-    for (entity, entrance, openable, massive, mut sprite) in &mut query {
-        if let Some(entrance) = entrance {
-            if game_state.finished_levels.contains(&entrance.0) {
-                if let Some(atlas) = sprite.texture_atlas.as_mut() {
-                    atlas.index = 1;
-                }
+    for (entrance, mut sprite) in &mut entrance_query {
+        if game_state.finished_levels.contains(&entrance.0) {
+            if let Some(atlas) = sprite.texture_atlas.as_mut() {
+                atlas.index = 1;
             }
-        } else if let Some(Openable::LevelFinished(level)) = openable {
+        }
+    }
+    for (entity, openable, massive, mut sprite) in &mut openable_query {
+        if let Openable::LevelFinished(level) = openable {
             let opened = game_state.finished_levels.contains(level);
             if opened && massive.is_some() {
                 commands.entity(entity).remove::<Massive>();
