@@ -195,7 +195,6 @@ fn on_update_background_transform(
     }
 }
 
-#[expect(clippy::too_many_arguments)]
 fn on_background_transform_animation(
     mut commands: Commands,
     mut background_query: Query<&mut Transform, With<Background>>,

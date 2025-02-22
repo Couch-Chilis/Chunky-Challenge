@@ -234,6 +234,23 @@ impl Explosion {
     }
 }
 
+pub struct Flash;
+
+impl Flash {
+    pub fn spawn(
+        assets: &GameObjectAssets,
+        initial_position: InitialPositionAndMetadata,
+    ) -> impl Bundle {
+        (
+            initial_position.direction,
+            initial_position.position,
+            Sprite::from_image(assets.flash.clone()),
+            Transform::from_translation(Vec3::new(0., 0., 5.)),
+            Volatile,
+        )
+    }
+}
+
 pub struct Gate;
 
 impl Gate {

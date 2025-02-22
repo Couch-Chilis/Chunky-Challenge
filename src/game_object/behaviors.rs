@@ -268,7 +268,6 @@ pub fn check_for_paint(
     }
 }
 
-#[expect(clippy::type_complexity)]
 pub fn check_for_transform_on_push(
     mut commands: Commands,
     transform_query: Query<(Entity, &Direction, Ref<Position>, &TransformOnPush), With<Pushable>>,
@@ -386,14 +385,19 @@ pub fn check_for_slippery_and_transporter(
     }
 }
 
+#[expect(clippy::type_complexity)]
 pub fn check_for_teleporter(
-    mut objects_query: Query<(Mut<Position>, Option<&Massive>), Without<Teleporter>>,
+    mut commands: Commands,
+    mut objects_query: Query<(Mut<Position>, &ObjectType, Option<&Massive>), Without<Teleporter>>,
     teleporters_query: Query<(&Position, &Teleporter)>,
+    mut temporary_timer: ResMut<TemporaryTimer>,
 ) {
     if !objects_query
         .iter()
-        .filter(|(position, _)| position.is_changed())
-        .any(|(position, _)| {
+        .filter(|(position, object_type, _)| {
+            position.is_changed() && **object_type != ObjectType::Flash
+        })
+        .any(|(position, ..)| {
             teleporters_query
                 .iter()
                 .any(|(teleporter_position, _)| position.as_ref() == teleporter_position)
@@ -404,14 +408,15 @@ pub fn check_for_teleporter(
 
     let (mut moved_objects, possible_collisions): (Vec<_>, Vec<_>) = objects_query
         .iter_mut()
-        .filter(|(position, _)| {
-            teleporters_query
-                .iter()
-                .any(|(teleporter_position, _)| position.as_ref() == teleporter_position)
+        .filter(|(position, object_type, _)| {
+            **object_type != ObjectType::Flash
+                && teleporters_query
+                    .iter()
+                    .any(|(teleporter_position, _)| position.as_ref() == teleporter_position)
         })
-        .partition(|(position, _)| position.is_changed());
+        .partition(|(position, ..)| position.is_changed());
 
-    for (ref mut position, _) in &mut moved_objects {
+    for (ref mut position, ..) in &mut moved_objects {
         for (teleporter_position, teleporter) in &teleporters_query {
             if position.as_ref() == teleporter_position {
                 if let Some((target_position, _)) =
@@ -422,9 +427,21 @@ pub fn check_for_teleporter(
                                 && *target_teleporter == teleporter
                         })
                 {
-                    if !possible_collisions.iter().any(|(position, massive)| {
+                    if !possible_collisions.iter().any(|(position, _, massive)| {
                         position.as_ref() == target_position && massive.is_some()
                     }) {
+                        commands.trigger(SpawnObject {
+                            object_type: ObjectType::Flash,
+                            position: position.as_ref().into(),
+                        });
+                        commands.trigger(SpawnObject {
+                            object_type: ObjectType::Flash,
+                            position: target_position.into(),
+                        });
+                        if temporary_timer.finished() {
+                            temporary_timer.reset();
+                        }
+
                         *position.as_mut() = *target_position;
                         break;
                     }

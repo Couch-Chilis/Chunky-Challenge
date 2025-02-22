@@ -8,8 +8,8 @@ use crate::{errors::UnknownObjectType, fonts::Fonts, levels::InitialPositionAndM
 use super::{
     assets::GameObjectAssets,
     object_bundles::{BlueBlock, BouncingBall, Creature1, Raft, RedBlock, Water},
-    BluePaint, Button, Direction, Door, Entrance, Exit, Explosion, Gate, Grave, Ice, Key, Mine,
-    Player, PurpleBlock, PurplePaint, RedPaint, Splash, Teleporter, Transporter, YellowBlock,
+    BluePaint, Button, Direction, Door, Entrance, Exit, Explosion, Flash, Gate, Grave, Ice, Key,
+    Mine, Player, PurpleBlock, PurplePaint, RedPaint, Splash, Teleporter, Transporter, YellowBlock,
 };
 
 #[derive(Clone, Component, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
@@ -24,6 +24,7 @@ pub enum ObjectType {
     Entrance,
     Exit,
     Explosion,
+    Flash,
     Gate,
     Grave,
     Ice,
@@ -54,6 +55,7 @@ impl Display for ObjectType {
             Self::Entrance => "Entrance",
             Self::Exit => "Exit",
             Self::Explosion => "Explosion",
+            Self::Flash => "Flash",
             Self::Gate => "Gate",
             Self::Grave => "Grave",
             Self::Ice => "Ice",
@@ -143,6 +145,7 @@ pub fn spawn_object_of_type(
         ObjectType::Entrance => Entrance::spawn(cb, assets, fonts, initial_position),
         ObjectType::Exit => cb.spawn(Exit::spawn(assets, initial_position)),
         ObjectType::Explosion => cb.spawn(Explosion::spawn(assets, initial_position)),
+        ObjectType::Flash => cb.spawn(Flash::spawn(assets, initial_position)),
         ObjectType::Gate => Gate::spawn(cb, assets, initial_position),
         ObjectType::Grave => cb.spawn(Grave::spawn(assets, initial_position)),
         ObjectType::Ice => cb.spawn(Ice::spawn(assets, initial_position)),
