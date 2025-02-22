@@ -2,6 +2,9 @@
 Width=22
 Height=16
 
+[BluePaint]
+Position=11,9
+
 [Creature1]
 Position=6,7
 Direction=Right
@@ -40,6 +43,9 @@ Position=8,8
 Position=11,12
 Position=12,5
 Position=15,9
+
+[Raft]
+Position=2,5;2,7
 
 [RedBlock]
 Position=5,2;5,3;5,4;5,5;5,12;5,13;5,14;5,15
