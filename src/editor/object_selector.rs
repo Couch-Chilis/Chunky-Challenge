@@ -290,12 +290,12 @@ impl ObjectSelector {
         )
     }
 
-    pub fn populate(cb: &mut ChildBuilder, assets: &GameObjectAssets) {
+    pub fn populate(spawner: &mut ChildSpawnerCommands, assets: &GameObjectAssets) {
         for i in 0..NUM_OBJECTS {
             let object_type = EditorObjectType::try_from(i).unwrap();
             let image = object_type.get_image_node(assets);
 
-            cb.spawn((object_type, image));
+            spawner.spawn((object_type, image));
         }
     }
 }

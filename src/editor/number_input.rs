@@ -31,7 +31,7 @@ impl NumberInput {
     }
 
     pub fn populate(
-        cb: &mut ChildBuilder,
+        spawner: &mut ChildSpawnerCommands,
         marker: impl Component + Copy,
         text: &str,
         value: i16,
@@ -40,7 +40,7 @@ impl NumberInput {
         let font = TextFont::from_font(fonts.poppins_light.clone()).with_font_size(18.);
         let font_small = font.clone().with_font_size(10.);
 
-        cb.spawn((
+        spawner.spawn((
             Text::new(text),
             TextColor(WHITE),
             font.clone(),
@@ -50,7 +50,7 @@ impl NumberInput {
             },
         ));
 
-        cb.spawn((
+        spawner.spawn((
             marker,
             NumberInput::Value,
             Text::new(value.to_string()),
@@ -58,47 +58,48 @@ impl NumberInput {
             font,
         ));
 
-        cb.spawn(Node {
-            width: Val::Px(20.),
-            height: Val::Px(22.),
-            flex_direction: FlexDirection::Column,
-            align_items: AlignItems::Center,
-            justify_content: JustifyContent::SpaceAround,
-            ..default()
-        })
-        .with_children(|cb| {
-            cb.spawn((
-                marker,
-                Interaction::None,
-                NumberInput::Increase,
-                Text::new("    +"),
-                TextColor(WHITE),
-                font_small.clone(),
-                BackgroundColor(GRAY_BACKGROUND),
-                Node {
-                    width: Val::Px(20.),
-                    height: Val::Px(10.),
-                    margin: UiRect::bottom(Val::Px(1.)),
-                    align_content: AlignContent::Center,
-                    ..default()
-                },
-            ));
-            cb.spawn((
-                marker,
-                Interaction::None,
-                NumberInput::Decrease,
-                Text::new("    -"),
-                TextColor(WHITE),
-                font_small,
-                BackgroundColor(GRAY_BACKGROUND),
-                Node {
-                    width: Val::Px(20.),
-                    height: Val::Px(10.),
-                    margin: UiRect::top(Val::Px(1.)),
-                    align_content: AlignContent::Center,
-                    ..default()
-                },
-            ));
-        });
+        spawner
+            .spawn(Node {
+                width: Val::Px(20.),
+                height: Val::Px(22.),
+                flex_direction: FlexDirection::Column,
+                align_items: AlignItems::Center,
+                justify_content: JustifyContent::SpaceAround,
+                ..default()
+            })
+            .with_children(|cb| {
+                cb.spawn((
+                    marker,
+                    Interaction::None,
+                    NumberInput::Increase,
+                    Text::new("    +"),
+                    TextColor(WHITE),
+                    font_small.clone(),
+                    BackgroundColor(GRAY_BACKGROUND),
+                    Node {
+                        width: Val::Px(20.),
+                        height: Val::Px(10.),
+                        margin: UiRect::bottom(Val::Px(1.)),
+                        align_content: AlignContent::Center,
+                        ..default()
+                    },
+                ));
+                cb.spawn((
+                    marker,
+                    Interaction::None,
+                    NumberInput::Decrease,
+                    Text::new("    -"),
+                    TextColor(WHITE),
+                    font_small,
+                    BackgroundColor(GRAY_BACKGROUND),
+                    Node {
+                        width: Val::Px(20.),
+                        height: Val::Px(10.),
+                        margin: UiRect::top(Val::Px(1.)),
+                        align_content: AlignContent::Center,
+                        ..default()
+                    },
+                ));
+            });
     }
 }

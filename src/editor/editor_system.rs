@@ -128,9 +128,9 @@ pub fn on_editor_mouse_input(
     editor_state: ResMut<EditorState>,
     buttons: Res<ButtonInput<MouseButton>>,
     dimensions: Res<Dimensions>,
-) {
+) -> Result<()> {
     if !editor_state.is_open {
-        return;
+        return Ok(());
     }
 
     if !buttons.pressed(MouseButton::Left) {
@@ -138,21 +138,21 @@ pub fn on_editor_mouse_input(
             commands.trigger(ActivateSelection { start, current });
         }
 
-        return;
+        return Ok(());
     }
 
-    let window = window_query.single();
+    let window = window_query.single()?;
     let Some(cursor_position) = window.cursor_position() else {
-        return;
+        return Ok(());
     };
 
     let window_size = window.size();
 
     if cursor_position.x >= window_size.x - EDITOR_WIDTH as f32 {
-        return;
+        return Ok(());
     }
 
-    let (background, transform) = background_query.single();
+    let (background, transform) = background_query.single()?;
 
     let (x, y) =
         level_coords_from_pointer_coords(cursor_position, *dimensions, transform, window_size);
@@ -175,6 +175,8 @@ pub fn on_editor_mouse_input(
     } else if dimensions.contains(position) {
         commands.trigger(SelectObject(position));
     }
+
+    Ok(())
 }
 
 fn extend_selection(
@@ -214,7 +216,7 @@ fn extend_selection(
         1.,
     );
 
-    if let Ok(mut selection_transform) = selection_query.get_single_mut() {
+    if let Ok(mut selection_transform) = selection_query.single_mut() {
         selection_transform.translation = translation;
         selection_transform.scale = scale;
     } else {
@@ -250,7 +252,7 @@ fn spawn_selected_object(
         if object_type == Some(ObjectType::Player) && *existing_object_type == ObjectType::Player
             || *object_position == position
         {
-            commands.entity(entity).despawn_recursive();
+            commands.entity(entity).despawn();
         }
     }
 
@@ -353,7 +355,7 @@ pub fn on_select_object(
     mut input_query: Query<(&Input, &NumberInput, &mut Text)>,
     objects: Query<(&Position, Option<&Entrance>, Option<&Teleporter>)>,
     mut editor_state: ResMut<EditorState>,
-) {
+) -> Result<()> {
     let selected_position = trigger.event().0;
 
     let Some((_, entrance, teleporter)) = objects
@@ -361,19 +363,19 @@ pub fn on_select_object(
         .find(|(position, ..)| **position == selected_position)
     else {
         commands.trigger(DeselectObject);
-        return;
+        return Ok(());
     };
 
     editor_state.selected_object = Some(selected_position);
 
     let (input_to_update, value) = if let Some(entrance) = entrance {
-        level_input_query.single_mut().display = Display::Flex;
+        level_input_query.single_mut()?.display = Display::Flex;
         (Input::Level, entrance.0)
     } else if let Some(teleporter) = teleporter {
-        identifier_input_query.single_mut().display = Display::Flex;
+        identifier_input_query.single_mut()?.display = Display::Flex;
         (Input::Identifier, teleporter.0)
     } else {
-        return;
+        return Ok(());
     };
 
     for (input, number_input, mut text) in &mut input_query {
@@ -381,6 +383,8 @@ pub fn on_select_object(
             text.0 = value.to_string();
         }
     }
+
+    Ok(())
 }
 
 pub fn on_deselect_object(
@@ -388,11 +392,13 @@ pub fn on_deselect_object(
     mut identifier_input_query: Query<&mut Node, (With<IdentifierInput>, Without<LevelInput>)>,
     mut level_input_query: Query<&mut Node, With<LevelInput>>,
     mut editor_state: ResMut<EditorState>,
-) {
+) -> Result<()> {
     editor_state.selected_object = None;
 
-    level_input_query.single_mut().display = Display::None;
-    identifier_input_query.single_mut().display = Display::None;
+    level_input_query.single_mut()?.display = Display::None;
+    identifier_input_query.single_mut()?.display = Display::None;
+
+    Ok(())
 }
 
 #[expect(clippy::too_many_arguments)]
@@ -409,10 +415,10 @@ pub fn on_toggle_editor(
     dimensions: Res<Dimensions>,
     fonts: Res<Fonts>,
 ) {
-    if let Ok(editor) = editor_query.get_single() {
+    if let Ok(editor) = editor_query.single() {
         *editor_state = EditorState::default();
 
-        commands.entity(editor).despawn_recursive();
+        commands.entity(editor).despawn();
 
         for selection in &mut selection_query {
             commands.entity(selection).despawn();
@@ -564,7 +570,7 @@ pub fn change_level(
     entrance.0 = entrance.0.saturating_add_signed(*delta);
 
     // Respawn to update the entrance text:
-    commands.entity(entity).despawn_recursive();
+    commands.entity(entity).despawn();
     commands.trigger(SpawnObject {
         object_type: ObjectType::Entrance,
         position: InitialPositionAndMetadata {

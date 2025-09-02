@@ -5,13 +5,14 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1"
-bevy = { version = "0.15.1", default-features = false, features = [
+bevy = { version = "0.16.1", default-features = false, features = [
     "animation",
     "bevy_asset",
     "bevy_gilrs",
     "bevy_scene",
     "bevy_winit",
     "bevy_core_pipeline",
+    "bevy_log",
     "bevy_pbr",
     "bevy_gltf",
     "bevy_render",

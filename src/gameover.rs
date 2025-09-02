@@ -40,14 +40,16 @@ pub fn check_for_game_over(
     mut game_over_query: Query<&mut Node, With<GameOver>>,
     player_query: Query<Entity, With<Player>>,
     editor: Res<EditorState>,
-) {
-    let mut game_over_style = game_over_query.get_single_mut().unwrap();
+) -> Result<()> {
+    let mut game_over_style = game_over_query.single_mut()?;
 
-    if player_query.get_single().is_ok() || editor.is_open {
+    if player_query.single().is_ok() || editor.is_open {
         if game_over_style.display != Display::None {
             game_over_style.display = Display::None;
         }
     } else if game_over_style.display != Display::Flex {
         game_over_style.display = Display::Flex;
     }
+
+    Ok(())
 }

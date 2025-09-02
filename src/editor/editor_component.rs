@@ -52,32 +52,37 @@ impl Editor {
     }
 
     pub fn populate(
-        cb: &mut ChildBuilder,
+        spawner: &mut ChildSpawnerCommands,
         assets: &GameObjectAssets,
         dimensions: &Dimensions,
         fonts: &Fonts,
     ) {
-        cb.spawn(NumberInput::new()).with_children(|cb| {
+        spawner.spawn(NumberInput::new()).with_children(|cb| {
             NumberInput::populate(cb, Input::Width, "Width:", dimensions.width, fonts)
         });
 
-        cb.spawn(NumberInput::new()).with_children(|cb| {
+        spawner.spawn(NumberInput::new()).with_children(|cb| {
             NumberInput::populate(cb, Input::Height, "Height:", dimensions.height, fonts)
         });
 
-        cb.spawn(ObjectSelector::new())
+        spawner
+            .spawn(ObjectSelector::new())
             .with_children(|cb| ObjectSelector::populate(cb, assets));
 
-        cb.spawn(EditorButton::new(EditorButton::Save))
+        spawner
+            .spawn(EditorButton::new(EditorButton::Save))
             .with_children(|cb| EditorButton::populate(cb, EditorButton::Save, "Save", fonts));
 
-        cb.spawn(EditorButton::new(EditorButton::Select))
+        spawner
+            .spawn(EditorButton::new(EditorButton::Select))
             .with_children(|cb| EditorButton::populate(cb, EditorButton::Select, "Select", fonts));
 
-        cb.spawn(NumberInput::hidden(LevelInput))
+        spawner
+            .spawn(NumberInput::hidden(LevelInput))
             .with_children(|cb| NumberInput::populate(cb, Input::Level, "Level:", 0, fonts));
 
-        cb.spawn(NumberInput::hidden(IdentifierInput))
+        spawner
+            .spawn(NumberInput::hidden(IdentifierInput))
             .with_children(|cb| {
                 NumberInput::populate(cb, Input::Identifier, "Teleporter:", 0, fonts)
             });

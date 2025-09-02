@@ -118,10 +118,12 @@ impl MenuButtonKind {
     }
 }
 
-fn setup_menus(mut commands: Commands, window_query: Query<&Window>, fonts: Res<Fonts>) {
-    let window = window_query
-        .get_single()
-        .expect("there should be only one window");
+fn setup_menus(
+    mut commands: Commands,
+    window_query: Query<&Window>,
+    fonts: Res<Fonts>,
+) -> Result<()> {
+    let window = window_query.single()?;
 
     commands
         .spawn((
@@ -184,6 +186,8 @@ fn setup_menus(mut commands: Commands, window_query: Query<&Window>, fonts: Res<
                     .with_children(|cb| MenuButton::populate(cb, kind.label(), &fonts));
             }
         });
+
+    Ok(())
 }
 
 fn render_menu(
@@ -231,8 +235,8 @@ impl MenuButton {
         )
     }
 
-    pub fn populate(cb: &mut ChildBuilder, text: impl Into<String>, fonts: &Fonts) {
-        cb.spawn((
+    pub fn populate(spawner: &mut ChildSpawnerCommands, text: impl Into<String>, fonts: &Fonts) {
+        spawner.spawn((
             Text::new(text),
             TextColor(WHITE),
             TextFont::from_font(fonts.poppins_light.clone()).with_font_size(36.),
@@ -264,7 +268,7 @@ pub fn on_menu_keyboard_input(
                 return;
             }
             Escape => {
-                app_exit_events.send(AppExit::Success);
+                app_exit_events.write(AppExit::Success);
             }
 
             _ => continue,
@@ -312,7 +316,7 @@ fn on_button_press(
 ) {
     match menu_state.selected_button {
         MenuButtonKind::Start => {
-            background_events.send(UpdateBackgroundTransform::HubIntro);
+            background_events.write(UpdateBackgroundTransform::HubIntro);
             menu_state.open_menu = None;
         }
         MenuButtonKind::Restart => {
@@ -329,7 +333,7 @@ fn on_button_press(
         }
         MenuButtonKind::OtherGames => { /* TODO */ }
         MenuButtonKind::Quit => {
-            app_exit_events.send(AppExit::Success);
+            app_exit_events.write(AppExit::Success);
         }
     }
 }

@@ -71,7 +71,7 @@ pub fn check_for_entrance(
                     save_to_disk: false,
                 });
                 exit_state.next_level = Some(entrance.0);
-                background_events.send(UpdateBackgroundTransform::LevelExit);
+                background_events.write(UpdateBackgroundTransform::LevelExit);
                 return;
             }
         }
@@ -95,7 +95,7 @@ pub fn check_for_exit(
                 let finished_level = game_state.current_level;
                 game_state.finished_levels.insert(finished_level);
                 exit_state.next_level = Some(0);
-                background_events.send(UpdateBackgroundTransform::LevelExit);
+                background_events.write(UpdateBackgroundTransform::LevelExit);
                 return;
             }
         }

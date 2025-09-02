@@ -81,14 +81,12 @@ fn resize_background(
     mut commands: Commands,
     mut background_query: Query<&mut Sprite, With<Background>>,
     dimensions: Res<Dimensions>,
-) {
+) -> Result<()> {
     if !dimensions.is_changed() {
-        return;
+        return Ok(());
     }
 
-    let mut sprite = background_query
-        .get_single_mut()
-        .expect("there should be only one background");
+    let mut sprite = background_query.single_mut()?;
 
     sprite.rect = Some(Rect::new(
         0.,
@@ -98,6 +96,8 @@ fn resize_background(
     ));
 
     commands.send_event(UpdateBackgroundTransform::Immediate);
+
+    Ok(())
 }
 
 #[expect(clippy::too_many_arguments)]
@@ -111,7 +111,7 @@ fn on_update_background_transform(
     editor_state: Res<EditorState>,
     menu_state: Res<MenuState>,
     ui_state: Res<UiState>,
-) {
+) -> Result<()> {
     let event = reader.read().reduce(|slowest, event| event.max(slowest));
     let duration_ms = match event {
         Some(UpdateBackgroundTransform::Immediate) => 0,
@@ -120,24 +120,18 @@ fn on_update_background_transform(
             400
         }
         Some(UpdateBackgroundTransform::HubIntro) => 2000,
-        None => return,
+        None => return Ok(()),
     };
 
-    let Ok(player_position) = player_query.get_single() else {
-        return;
-    };
+    let player_position = player_query.single()?;
     let focus_position = if menu_state.is_in_hub_menu() {
         (INITIAL_HUB_FOCUS.0, INITIAL_HUB_FOCUS.1)
     } else {
         (player_position.x, player_position.y)
     };
 
-    let mut transform = background_query
-        .get_single_mut()
-        .expect("there should be only one background");
-    let window = window_query
-        .get_single()
-        .expect("there should be only one window");
+    let mut transform = background_query.single_mut()?;
+    let window = window_query.single()?;
 
     let window_size = window.size();
     let zoom_factor = if menu_state.is_in_hub_menu() {
@@ -193,6 +187,8 @@ fn on_update_background_transform(
         *transform = Transform::from_scale(scale).with_translation(translation);
         *animation = BackgroundTransformAnimation::Paused;
     }
+
+    Ok(())
 }
 
 fn on_background_transform_animation(
@@ -201,21 +197,19 @@ fn on_background_transform_animation(
     mut animation: ResMut<BackgroundTransformAnimation>,
     exit_state: Res<ExitState>,
     time: Res<Time<Virtual>>,
-) {
+) -> Result<()> {
     let BackgroundTransformAnimation::Active {
         scale_curve,
         translation_curve,
         timer,
     } = animation.as_mut()
     else {
-        return;
+        return Ok(());
     };
 
     timer.tick(time.delta());
 
-    let mut transform = background_query
-        .get_single_mut()
-        .expect("there should be only one background");
+    let mut transform = background_query.single_mut()?;
 
     let t = timer.fraction();
     *transform = Transform::from_scale(scale_curve.sample_unchecked(t))
@@ -228,6 +222,8 @@ fn on_background_transform_animation(
             commands.trigger(LoadLevel(next_level));
         }
     }
+
+    Ok(())
 }
 
 fn calculate_background_transform_with_zoom_factor(

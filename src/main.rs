@@ -245,9 +245,9 @@ pub fn on_mouse_input(
     buttons: Res<ButtonInput<MouseButton>>,
     dimensions: Res<Dimensions>,
     menu_state: Res<MenuState>,
-) {
+) -> Result<()> {
     if editor_state.is_open {
-        on_editor_mouse_input(
+        return on_editor_mouse_input(
             commands,
             selection_query,
             background_query,
@@ -257,21 +257,20 @@ pub fn on_mouse_input(
             buttons,
             dimensions,
         );
-        return;
     } else if menu_state.is_open() {
-        return;
+        return Ok(());
     }
 
     if !buttons.pressed(MouseButton::Left) {
         if ui_state.drag_start.is_some() {
             ui_state.drag_start = None;
         }
-        return;
+        return Ok(());
     }
 
-    let window = window_query.single();
+    let window = window_query.single()?;
     let Some(cursor_position) = window.cursor_position() else {
-        return;
+        return Ok(());
     };
 
     let zoom_factor = ui_state.zoom_factor;
@@ -288,6 +287,8 @@ pub fn on_mouse_input(
     }
 
     ui_state.drag_start = Some((x, y));
+
+    Ok(())
 }
 
 #[expect(clippy::too_many_arguments)]
@@ -317,18 +318,18 @@ fn on_keyboard_input(
         use KeyCode::*;
         match key {
             ArrowUp => {
-                game_events.send(GameEvent::MovePlayer(Direction::Up));
+                game_events.write(GameEvent::MovePlayer(Direction::Up));
             }
             ArrowRight => {
-                game_events.send(GameEvent::MovePlayer(Direction::Right));
+                game_events.write(GameEvent::MovePlayer(Direction::Right));
             }
             ArrowDown => {
-                game_events.send(GameEvent::MovePlayer(Direction::Down));
+                game_events.write(GameEvent::MovePlayer(Direction::Down));
             }
             ArrowLeft => {
-                game_events.send(GameEvent::MovePlayer(Direction::Left));
+                game_events.write(GameEvent::MovePlayer(Direction::Left));
             }
-            Enter if player_query.get_single().is_err() => {
+            Enter if player_query.single().is_err() => {
                 commands.trigger(LoadRelativeLevel(0));
             }
             Equal => {
@@ -396,8 +397,7 @@ fn on_game_event(
     for event in level_events.read() {
         match event {
             GameEvent::MovePlayer(direction) => {
-                if let Ok((mut position, mut player_direction, weight)) =
-                    player_query.get_single_mut()
+                if let Ok((mut position, mut player_direction, weight)) = player_query.single_mut()
                 {
                     ui_state.camera_offset = Default::default();
 
@@ -460,7 +460,7 @@ fn load_level(
     fonts: Res<Fonts>,
     levels: Res<Levels>,
     menu_state: Res<MenuState>,
-) {
+) -> Result<()> {
     let LoadLevel(level) = trigger.event();
     game_state.set_current_level(*level);
 
@@ -500,11 +500,11 @@ Position=2,1
         }
     }
 
-    let background_entity = background_query.single_mut();
+    let background_entity = background_query.single_mut()?;
     let mut background = commands.entity(background_entity);
-    background.despawn_descendants();
-    background.with_children(|cb| {
-        spawn_level_objects(cb, level.objects, &assets, &fonts);
+    background.despawn_related::<Children>();
+    background.with_children(|spawner| {
+        spawn_level_objects(spawner, level.objects, &assets, &fonts);
     });
 
     pressed_triggers.num_pressed_triggers = 0;
@@ -513,11 +513,13 @@ Position=2,1
 
     exit_state.next_level = None;
 
-    background_events.send(if menu_state.is_in_hub_menu() {
+    background_events.write(if menu_state.is_in_hub_menu() {
         UpdateBackgroundTransform::Immediate
     } else {
         UpdateBackgroundTransform::LevelEntrance
     });
+
+    Ok(())
 }
 
 fn load_relative_level(
@@ -610,14 +612,14 @@ fn save_level(
 }
 
 fn spawn_level_objects(
-    cb: &mut ChildBuilder,
+    spawner: &mut ChildSpawnerCommands,
     objects: BTreeMap<ObjectType, Vec<InitialPositionAndMetadata>>,
     assets: &GameObjectAssets,
     fonts: &Fonts,
 ) {
     for (object_type, initial_positions) in objects {
         for initial_position in initial_positions {
-            spawn_object_of_type(cb, assets, fonts, object_type, initial_position);
+            spawn_object_of_type(spawner, assets, fonts, object_type, initial_position);
         }
     }
 }
@@ -628,17 +630,17 @@ fn spawn_object(
     background_query: Query<Entity, With<Background>>,
     assets: Res<GameObjectAssets>,
     fonts: Res<Fonts>,
-) {
+) -> Result<()> {
     let SpawnObject {
         object_type,
         position,
     } = trigger.event();
 
-    let background = background_query
-        .get_single()
-        .expect("there should be only one background");
+    let background = background_query.single()?;
     let mut background = commands.entity(background);
     background.with_children(|cb| {
         spawn_object_of_type(cb, &assets, &fonts, *object_type, position.clone());
     });
+
+    Ok(())
 }

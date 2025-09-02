@@ -29,12 +29,12 @@ impl EditorButton {
     }
 
     pub fn populate(
-        cb: &mut ChildBuilder,
+        spawner: &mut ChildSpawnerCommands,
         marker: impl Bundle,
         text: impl Into<String>,
         fonts: &Fonts,
     ) {
-        cb.spawn((
+        spawner.spawn((
             marker,
             Text::new(text),
             TextColor(WHITE),

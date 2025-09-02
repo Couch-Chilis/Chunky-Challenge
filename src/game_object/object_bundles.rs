@@ -121,7 +121,7 @@ pub struct Door;
 
 impl Door {
     pub fn spawn<'a>(
-        cb: &'a mut ChildBuilder,
+        spawner: &'a mut ChildSpawnerCommands,
         assets: &GameObjectAssets,
         initial_position: InitialPositionAndMetadata,
     ) -> EntityCommands<'a> {
@@ -143,7 +143,7 @@ impl Door {
         let transform = Transform::from_translation(Vec3::new(0., 0., 5.));
 
         if open {
-            cb.spawn((
+            spawner.spawn((
                 ObjectType::Door,
                 direction,
                 Immovable,
@@ -153,7 +153,7 @@ impl Door {
                 transform,
             ))
         } else {
-            cb.spawn((
+            spawner.spawn((
                 ObjectType::Door,
                 Immovable,
                 Massive,
@@ -168,12 +168,12 @@ impl Door {
 
 impl Entrance {
     pub fn spawn<'a>(
-        cb: &'a mut ChildBuilder,
+        spawner: &'a mut ChildSpawnerCommands,
         assets: &GameObjectAssets,
         fonts: &Fonts,
         initial_position: InitialPositionAndMetadata,
     ) -> EntityCommands<'a> {
-        let mut commands = cb.spawn((
+        let mut commands = spawner.spawn((
             ObjectType::Entrance,
             BlocksPushes,
             initial_position.direction,
@@ -255,7 +255,7 @@ pub struct Gate;
 
 impl Gate {
     pub fn spawn<'a>(
-        cb: &'a mut ChildBuilder,
+        spawner: &'a mut ChildSpawnerCommands,
         assets: &GameObjectAssets,
         initial_position: InitialPositionAndMetadata,
     ) -> EntityCommands<'a> {
@@ -282,7 +282,7 @@ impl Gate {
         let transform = Transform::from_translation(Vec3::new(0., 0., 5.));
 
         if open {
-            cb.spawn((
+            spawner.spawn((
                 ObjectType::Gate,
                 direction,
                 Immovable,
@@ -292,7 +292,7 @@ impl Gate {
                 transform,
             ))
         } else {
-            cb.spawn((
+            spawner.spawn((
                 ObjectType::Gate,
                 direction,
                 Immovable,
