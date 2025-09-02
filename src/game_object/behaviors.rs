@@ -313,6 +313,10 @@ pub fn check_for_slippery_and_transporter(
 
     let mut already_moved = BTreeSet::new();
     for (slippery_position, mut blocks_movement) in &mut slippery_query {
+        if *blocks_movement == BlocksMovement::Disabled {
+            continue;
+        }
+
         let (mut transportees, collision_objects): (Vec<_>, Vec<_>) = potential_transportees_query
             .iter_mut()
             .map(|(entity, immovable, collision_object)| {

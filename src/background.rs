@@ -123,7 +123,9 @@ fn on_update_background_transform(
         None => return Ok(()),
     };
 
-    let player_position = player_query.single()?;
+    let Ok(player_position) = player_query.single() else {
+        return Ok(());
+    };
     let focus_position = if menu_state.is_in_hub_menu() {
         (INITIAL_HUB_FOCUS.0, INITIAL_HUB_FOCUS.1)
     } else {
