@@ -1,7 +1,7 @@
 use std::{cmp::Ordering, collections::BTreeSet};
 
 use bevy::prelude::*;
-use rand::{thread_rng, Rng};
+use rand::{rng, Rng};
 
 use crate::{
     background::UpdateBackgroundTransform,
@@ -28,7 +28,7 @@ pub fn animate_objects(
     if timer.just_finished() {
         for (animatable, mut sprite) in &mut query {
             if let Some(atlas) = sprite.texture_atlas.as_mut() {
-                atlas.index = thread_rng().gen_range(0..animatable.num_frames);
+                atlas.index = rng().random_range(0..animatable.num_frames);
             }
         }
     }
@@ -57,7 +57,7 @@ pub fn check_for_entrance(
     mut commands: Commands,
     player_query: Query<Ref<Position>, With<Player>>,
     entrance_query: Query<(&Entrance, &Position)>,
-    mut background_events: EventWriter<UpdateBackgroundTransform>,
+    mut background_events: MessageWriter<UpdateBackgroundTransform>,
     mut exit_state: ResMut<ExitState>,
 ) {
     for player_position in &player_query {
@@ -81,7 +81,7 @@ pub fn check_for_entrance(
 pub fn check_for_exit(
     player_query: Query<Ref<Position>, With<Player>>,
     exit_query: Query<&Position, With<Exit>>,
-    mut background_events: EventWriter<UpdateBackgroundTransform>,
+    mut background_events: MessageWriter<UpdateBackgroundTransform>,
     mut exit_state: ResMut<ExitState>,
     mut game_state: ResMut<GameState>,
 ) {
@@ -118,7 +118,7 @@ pub fn check_for_explosive(
                     object_type: ObjectType::Explosion,
                     position: position.into(),
                 });
-                if temporary_timer.finished() {
+                if temporary_timer.is_finished() {
                     temporary_timer.reset();
                 }
             }
@@ -220,7 +220,7 @@ pub fn check_for_liquid(
                         object_type: ObjectType::Splash,
                         position: position.into(),
                     });
-                    if temporary_timer.finished() {
+                    if temporary_timer.is_finished() {
                         temporary_timer.reset();
                     }
                 }
@@ -438,7 +438,7 @@ pub fn check_for_teleporter(
                             object_type: ObjectType::Flash,
                             position: target_position.into(),
                         });
-                        if temporary_timer.finished() {
+                        if temporary_timer.is_finished() {
                             temporary_timer.reset();
                         }
 

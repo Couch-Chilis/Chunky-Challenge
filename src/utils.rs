@@ -1,11 +1,11 @@
 use std::{fs, path::PathBuf};
 
 use bevy::{
+    asset::RenderAssetUsages,
     image::{
         CompressedImageFormats, ImageAddressMode, ImageSampler, ImageSamplerDescriptor, ImageType,
     },
     prelude::*,
-    render::render_asset::RenderAssetUsages,
 };
 
 use crate::{levels::Dimensions, GRID_SIZE};
@@ -30,7 +30,6 @@ pub fn level_coords_from_pointer_coords(
 }
 
 pub fn ensure_chunky_dir() -> PathBuf {
-    #[expect(deprecated)]
     let parent_dir = std::env::home_dir().unwrap_or(PathBuf::from("/tmp"));
 
     let chunky_dir = parent_dir.join(if cfg!(target_os = "ios") {

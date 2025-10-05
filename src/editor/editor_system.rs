@@ -293,7 +293,7 @@ pub fn on_editor_keyboard_input(
                     commands.trigger(MoveAllObjects { dx: 0, dy: -1 });
                 } else {
                     ui_state.camera_offset.1 -= 1.;
-                    commands.send_event(UpdateBackgroundTransform::Fast);
+                    commands.write_message(UpdateBackgroundTransform::Fast);
                 }
             }
             ArrowRight => {
@@ -301,7 +301,7 @@ pub fn on_editor_keyboard_input(
                     commands.trigger(MoveAllObjects { dx: 1, dy: 0 });
                 } else {
                     ui_state.camera_offset.0 += 1.;
-                    commands.send_event(UpdateBackgroundTransform::Fast);
+                    commands.write_message(UpdateBackgroundTransform::Fast);
                 }
             }
             ArrowDown => {
@@ -309,7 +309,7 @@ pub fn on_editor_keyboard_input(
                     commands.trigger(MoveAllObjects { dx: 0, dy: 1 });
                 } else {
                     ui_state.camera_offset.1 += 1.;
-                    commands.send_event(UpdateBackgroundTransform::Fast);
+                    commands.write_message(UpdateBackgroundTransform::Fast);
                 }
             }
             ArrowLeft => {
@@ -317,7 +317,7 @@ pub fn on_editor_keyboard_input(
                     commands.trigger(MoveAllObjects { dx: -1, dy: 0 });
                 } else {
                     ui_state.camera_offset.0 -= 1.;
-                    commands.send_event(UpdateBackgroundTransform::Fast);
+                    commands.write_message(UpdateBackgroundTransform::Fast);
                 }
             }
             Equal => {
@@ -348,7 +348,7 @@ pub fn on_editor_keyboard_input(
 }
 
 pub fn on_select_object(
-    trigger: Trigger<SelectObject>,
+    trigger: On<SelectObject>,
     mut commands: Commands,
     mut identifier_input_query: Query<&mut Node, (With<IdentifierInput>, Without<LevelInput>)>,
     mut level_input_query: Query<&mut Node, With<LevelInput>>,
@@ -388,7 +388,7 @@ pub fn on_select_object(
 }
 
 pub fn on_deselect_object(
-    _trigger: Trigger<DeselectObject>,
+    _trigger: On<DeselectObject>,
     mut identifier_input_query: Query<&mut Node, (With<IdentifierInput>, Without<LevelInput>)>,
     mut level_input_query: Query<&mut Node, With<LevelInput>>,
     mut editor_state: ResMut<EditorState>,
@@ -403,7 +403,7 @@ pub fn on_deselect_object(
 
 #[expect(clippy::too_many_arguments)]
 pub fn on_toggle_editor(
-    _trigger: Trigger<ToggleEditor>,
+    _trigger: On<ToggleEditor>,
     mut commands: Commands,
     mut selection_query: Query<Entity, With<SelectionOverlay>>,
     mut editor_state: ResMut<EditorState>,
@@ -441,11 +441,11 @@ pub fn on_toggle_editor(
         transporter_timer.pause();
     }
 
-    commands.send_event(UpdateBackgroundTransform::Immediate);
+    commands.write_message(UpdateBackgroundTransform::Immediate);
 }
 
 pub fn on_toggle_selection(
-    _trigger: Trigger<ToggleSelection>,
+    _trigger: On<ToggleSelection>,
     mut commands: Commands,
     mut selection_query: Query<Entity, With<SelectionOverlay>>,
     mut button_query: Query<(&EditorButton, &mut Text)>,
@@ -476,7 +476,7 @@ pub fn on_toggle_selection(
 }
 
 pub fn on_activate_selection(
-    trigger: Trigger<ActivateSelection>,
+    trigger: On<ActivateSelection>,
     mut button_query: Query<(&EditorButton, &mut Text)>,
     mut editor_state: ResMut<EditorState>,
 ) {
@@ -502,7 +502,7 @@ pub fn on_activate_selection(
 }
 
 pub fn change_height(
-    trigger: Trigger<ChangeHeight>,
+    trigger: On<ChangeHeight>,
     mut commands: Commands,
     mut dimensions: ResMut<Dimensions>,
 ) {
@@ -521,7 +521,7 @@ pub fn change_height(
 }
 
 pub fn change_identifier(
-    trigger: Trigger<ChangeIdentifier>,
+    trigger: On<ChangeIdentifier>,
     mut commands: Commands,
     mut teleporters: Query<(&Position, &mut Teleporter)>,
     mut input_query: Query<(&Input, &NumberInput, &mut Text)>,
@@ -548,7 +548,7 @@ pub fn change_identifier(
 }
 
 pub fn change_level(
-    trigger: Trigger<ChangeLevel>,
+    trigger: On<ChangeLevel>,
     mut commands: Commands,
     mut entrances: Query<(Entity, &Position, &mut Entrance)>,
     mut input_query: Query<(&Input, &NumberInput, &mut Text)>,
@@ -590,7 +590,7 @@ pub fn change_level(
 }
 
 pub fn change_width(
-    trigger: Trigger<ChangeWidth>,
+    trigger: On<ChangeWidth>,
     mut commands: Commands,
     mut dimensions: ResMut<Dimensions>,
 ) {
@@ -609,7 +609,7 @@ pub fn change_width(
 }
 
 pub fn move_all_objects(
-    trigger: Trigger<MoveAllObjects>,
+    trigger: On<MoveAllObjects>,
     mut query: Query<&mut Position>,
     mut editor_state: ResMut<EditorState>,
 ) {

@@ -80,7 +80,6 @@ impl Plugin for MenuPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Startup, setup_menus.after(setup))
             .init_resource::<MenuState>()
-            .add_event::<ButtonPress>()
             .add_observer(on_button_press)
             .add_systems(Update, (on_menu_interaction_input, on_resize))
             .add_systems(Update, render_menu.after(on_menu_interaction_input));
@@ -131,7 +130,7 @@ fn setup_menus(
                 kind: MenuKind::Hub,
             },
             BackgroundColor(GRAY_BACKGROUND),
-            BorderColor(RED),
+            BorderColor::all(RED),
             GlobalZIndex(100),
             Node {
                 display: Display::Flex,
@@ -162,7 +161,7 @@ fn setup_menus(
                 kind: MenuKind::Level,
             },
             BackgroundColor(GRAY_BACKGROUND),
-            BorderColor(RED),
+            BorderColor::all(RED),
             GlobalZIndex(100),
             Node {
                 display: Display::Flex,
@@ -239,7 +238,7 @@ impl MenuButton {
         spawner.spawn((
             Text::new(text),
             TextColor(WHITE),
-            TextFont::from_font(fonts.poppins_light.clone()).with_font_size(36.),
+            TextFont::from(fonts.poppins_light.clone()).with_font_size(36.),
             Node {
                 margin: UiRect::all(Val::Auto),
                 ..default()
@@ -250,7 +249,7 @@ impl MenuButton {
 
 pub fn on_menu_keyboard_input(
     mut commands: Commands,
-    mut app_exit_events: EventWriter<AppExit>,
+    mut app_exit_events: MessageWriter<AppExit>,
     mut menu_state: ResMut<MenuState>,
     keys: Res<ButtonInput<KeyCode>>,
 ) {
@@ -308,10 +307,10 @@ fn on_resize(
 }
 
 fn on_button_press(
-    _trigger: Trigger<ButtonPress>,
+    _trigger: On<ButtonPress>,
     mut commands: Commands,
-    mut app_exit_events: EventWriter<AppExit>,
-    mut background_events: EventWriter<UpdateBackgroundTransform>,
+    mut app_exit_events: MessageWriter<AppExit>,
+    mut background_events: MessageWriter<UpdateBackgroundTransform>,
     mut menu_state: ResMut<MenuState>,
 ) {
     match menu_state.selected_button {

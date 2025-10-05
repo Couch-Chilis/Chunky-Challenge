@@ -192,7 +192,7 @@ impl Entrance {
             cb.spawn((
                 Text2d::new(initial_position.level.unwrap_or_default().to_string()),
                 TextColor(ENTRANCE_TEXT),
-                TextFont::from_font(fonts.poppins_light.clone()).with_font_size(24.),
+                TextFont::from(fonts.poppins_light.clone()).with_font_size(24.),
                 Transform::from_translation(Vec3::new(0., 0., 1.)),
             ));
         });

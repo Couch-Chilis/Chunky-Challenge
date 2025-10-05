@@ -1,6 +1,6 @@
 use bevy::color::Color;
 
-pub const DEFAULT_WINDOW_SIZE: i16 = 768;
+pub const DEFAULT_WINDOW_SIZE: u32 = 768;
 pub const EDITOR_PADDING: i16 = 20;
 pub const EDITOR_WIDTH: i16 = 250;
 pub const GRID_SIZE: i16 = 48;

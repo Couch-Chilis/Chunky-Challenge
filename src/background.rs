@@ -27,7 +27,7 @@ pub enum BackgroundTransformAnimation {
     },
 }
 
-#[derive(Eq, Event, Ord, PartialEq, PartialOrd)]
+#[derive(Eq, Message, Ord, PartialEq, PartialOrd)]
 pub enum UpdateBackgroundTransform {
     Immediate,
     Fast,
@@ -43,7 +43,7 @@ impl Plugin for BackgroundPlugin {
         app.add_systems(Startup, setup_background)
             .init_resource::<BackgroundAsset>()
             .init_resource::<BackgroundTransformAnimation>()
-            .add_event::<UpdateBackgroundTransform>()
+            .add_message::<UpdateBackgroundTransform>()
             .add_systems(
                 Update,
                 resize_background
@@ -95,14 +95,14 @@ fn resize_background(
         (dimensions.height * GRID_SIZE) as f32,
     ));
 
-    commands.send_event(UpdateBackgroundTransform::Immediate);
+    commands.write_message(UpdateBackgroundTransform::Immediate);
 
     Ok(())
 }
 
 #[expect(clippy::too_many_arguments)]
 fn on_update_background_transform(
-    mut reader: EventReader<UpdateBackgroundTransform>,
+    mut reader: MessageReader<UpdateBackgroundTransform>,
     mut background_query: Query<&mut Transform, With<Background>>,
     mut animation: ResMut<BackgroundTransformAnimation>,
     player_query: Query<&Position, With<Player>>,
@@ -217,7 +217,7 @@ fn on_background_transform_animation(
     *transform = Transform::from_scale(scale_curve.sample_unchecked(t))
         .with_translation(translation_curve.sample_unchecked(t));
 
-    if timer.finished() {
+    if timer.is_finished() {
         *animation = BackgroundTransformAnimation::Paused;
 
         if let Some(next_level) = exit_state.next_level {

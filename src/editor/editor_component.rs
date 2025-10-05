@@ -33,7 +33,7 @@ impl Editor {
         (
             Editor,
             BackgroundColor(GRAY_BACKGROUND),
-            BorderColor(RED),
+            BorderColor::all(RED),
             GlobalZIndex(100),
             Node {
                 width: Val::Px(EDITOR_WIDTH as f32 - BORDER_WIDTH),

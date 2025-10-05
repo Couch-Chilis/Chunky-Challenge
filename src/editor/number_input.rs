@@ -37,7 +37,7 @@ impl NumberInput {
         value: i16,
         fonts: &Fonts,
     ) {
-        let font = TextFont::from_font(fonts.poppins_light.clone()).with_font_size(18.);
+        let font = TextFont::from(fonts.poppins_light.clone()).with_font_size(18.);
         let font_small = font.clone().with_font_size(10.);
 
         spawner.spawn((

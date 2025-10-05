@@ -38,7 +38,7 @@ impl EditorButton {
             marker,
             Text::new(text),
             TextColor(WHITE),
-            TextFont::from_font(fonts.poppins_light.clone()).with_font_size(18.),
+            TextFont::from(fonts.poppins_light.clone()).with_font_size(18.),
             Node {
                 margin: UiRect::all(Val::Auto),
                 ..Default::default()

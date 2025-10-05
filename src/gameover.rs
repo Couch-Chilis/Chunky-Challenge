@@ -10,7 +10,7 @@ pub fn setup_gameover(commands: &mut Commands, fonts: &Fonts) {
         .spawn((
             GameOver,
             BackgroundColor(GRAY_BACKGROUND),
-            BorderColor(RED),
+            BorderColor::all(RED),
             GlobalZIndex(100),
             Node {
                 display: Display::None,
@@ -26,8 +26,8 @@ pub fn setup_gameover(commands: &mut Commands, fonts: &Fonts) {
             cb.spawn((
                 Text::new("Game Over\n\nPress Enter to try again"),
                 TextColor(WHITE),
-                TextFont::from_font(fonts.poppins_light.clone()).with_font_size(20.),
-                TextLayout::new_with_justify(JustifyText::Center),
+                TextFont::from(fonts.poppins_light.clone()).with_font_size(20.),
+                TextLayout::new_with_justify(Justify::Center),
                 Node {
                     margin: UiRect::all(Val::Auto),
                     ..default()

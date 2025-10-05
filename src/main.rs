@@ -18,9 +18,9 @@ use std::{borrow::Cow, collections::BTreeMap, fs};
 
 use background::{Background, BackgroundPlugin, UpdateBackgroundTransform};
 use bevy::{
+    ecs::system::NonSendMarker,
     prelude::*,
     window::{PrimaryWindow, WindowMode, WindowResized, WindowResolution},
-    winit::WinitWindows,
 };
 use constants::*;
 use editor::{
@@ -35,6 +35,7 @@ use game_object::{
 };
 use game_state::GameState;
 use gameover::{check_for_game_over, setup_gameover};
+use image::ImageFormat;
 use levels::{Dimensions, InitialPositionAndMetadata, Level, Levels};
 use menu::{on_menu_keyboard_input, MenuKind, MenuPlugin, MenuState};
 use timers::{AnimationTimer, MovementTimer, TemporaryTimer, TransporterTimer};
@@ -55,7 +56,7 @@ struct PressedTriggers {
 #[derive(Event)]
 struct ChangeZoom(f32);
 
-#[derive(Event)]
+#[derive(Message)]
 enum GameEvent {
     MovePlayer(Direction),
 }
@@ -97,7 +98,7 @@ fn main() {
                 primary_window: Some(Window {
                     title: "Chunky's Challenge".to_owned(),
                     mode: get_initial_window_mode(),
-                    resolution: WindowResolution::from((DEFAULT_WINDOW_SIZE, DEFAULT_WINDOW_SIZE))
+                    resolution: WindowResolution::new(DEFAULT_WINDOW_SIZE, DEFAULT_WINDOW_SIZE)
                         .with_scale_factor_override(1.),
                     ..default()
                 }),
@@ -119,21 +120,15 @@ fn main() {
         .init_resource::<TransporterTimer>()
         .init_resource::<UiState>()
         .insert_resource(GameState::load())
-        .add_event::<ChangeZoom>()
-        .add_event::<GameEvent>()
-        .add_event::<LoadLevel>()
-        .add_event::<LoadRelativeLevel>()
-        .add_event::<ResetLevel>()
-        .add_event::<SaveLevel>()
-        .add_event::<SpawnObject>()
+        .add_message::<GameEvent>()
         .add_observer(load_level)
         .add_observer(load_relative_level)
         .add_observer(on_zoom_change)
         .add_observer(reset_level)
         .add_observer(save_level)
         .add_observer(spawn_object)
-        .add_systems(Startup, (set_window_icon, setup))
-        .add_systems(PostStartup, post_setup)
+        .add_systems(Startup, setup)
+        .add_systems(PostStartup, (set_window_icon, post_setup))
         .add_systems(Update, (on_keyboard_input, on_mouse_input, on_resize))
         .add_systems(
             Update,
@@ -191,9 +186,9 @@ fn get_initial_window_mode() -> WindowMode {
     }
 }
 
-fn set_window_icon(windows: NonSend<WinitWindows>) {
+fn set_window_icon(_non_send_marker: NonSendMarker) {
     let (icon_rgba, icon_width, icon_height) = {
-        let image = image::load_from_memory_with_format(PLAYER_ASSET, image::ImageFormat::Png)
+        let image = image::load_from_memory_with_format(PLAYER_ASSET, ImageFormat::Png)
             .unwrap()
             .into_rgba8();
         let (width, height) = image.dimensions();
@@ -201,9 +196,11 @@ fn set_window_icon(windows: NonSend<WinitWindows>) {
         (rgba, width, height)
     };
     let icon = Icon::from_rgba(icon_rgba, icon_width, icon_height).unwrap();
-    for window in windows.windows.values() {
-        window.set_window_icon(Some(icon.clone()));
-    }
+    bevy::winit::WINIT_WINDOWS.with_borrow(|winit_windows| {
+        for window in winit_windows.windows.values() {
+            window.set_window_icon(Some(icon.clone()));
+        }
+    });
 }
 
 fn setup(
@@ -282,7 +279,7 @@ pub fn on_mouse_input(
         if ui_state.camera_offset != new_camera_offset {
             ui_state.camera_offset.0 += new_camera_offset.0;
             ui_state.camera_offset.1 += new_camera_offset.1;
-            commands.send_event(UpdateBackgroundTransform::Fast);
+            commands.write_message(UpdateBackgroundTransform::Fast);
         }
     }
 
@@ -294,8 +291,8 @@ pub fn on_mouse_input(
 #[expect(clippy::too_many_arguments)]
 fn on_keyboard_input(
     mut commands: Commands,
-    mut game_events: EventWriter<GameEvent>,
-    app_exit_events: EventWriter<AppExit>,
+    mut game_events: MessageWriter<GameEvent>,
+    app_exit_events: MessageWriter<AppExit>,
     player_query: Query<Entity, With<Player>>,
     mut menu_state: ResMut<MenuState>,
     editor_state: ResMut<EditorState>,
@@ -388,7 +385,7 @@ fn update_entity_directions(mut query: Query<(&Direction, &mut Sprite), Changed<
 }
 
 fn on_game_event(
-    mut level_events: EventReader<GameEvent>,
+    mut level_events: MessageReader<GameEvent>,
     mut collision_objects_query: Query<CollisionObjectQuery, Without<Player>>,
     mut player_query: Query<(&mut Position, &mut Direction, Option<&Weight>), With<Player>>,
     mut ui_state: ResMut<UiState>,
@@ -422,37 +419,33 @@ fn on_game_event(
 fn on_player_moved(mut commands: Commands, query: Query<Ref<Position>, With<Player>>) {
     for player_position in &query {
         if player_position.is_changed() {
-            commands.send_event(UpdateBackgroundTransform::Fast);
+            commands.write_message(UpdateBackgroundTransform::Fast);
         }
     }
 }
 
-fn on_resize(mut commands: Commands, mut resize_reader: EventReader<WindowResized>) {
+fn on_resize(mut commands: Commands, mut resize_reader: MessageReader<WindowResized>) {
     if resize_reader.read().last().is_some() {
-        commands.send_event(UpdateBackgroundTransform::Immediate);
+        commands.write_message(UpdateBackgroundTransform::Immediate);
     }
 }
 
-fn on_zoom_change(
-    trigger: Trigger<ChangeZoom>,
-    mut commands: Commands,
-    mut ui_state: ResMut<UiState>,
-) {
+fn on_zoom_change(trigger: On<ChangeZoom>, mut commands: Commands, mut ui_state: ResMut<UiState>) {
     let ChangeZoom(factor) = trigger.event();
 
     let zoom_factor = ui_state.zoom_factor;
     if (*factor < 1. && zoom_factor >= 0.2) || (*factor > 1. && zoom_factor <= 5.) {
         ui_state.zoom_factor = zoom_factor * factor;
-        commands.send_event(UpdateBackgroundTransform::Fast);
+        commands.write_message(UpdateBackgroundTransform::Fast);
     }
 }
 
 #[expect(clippy::too_many_arguments)]
 fn load_level(
-    trigger: Trigger<LoadLevel>,
+    trigger: On<LoadLevel>,
     mut commands: Commands,
     mut background_query: Query<Entity, With<Background>>,
-    mut background_events: EventWriter<UpdateBackgroundTransform>,
+    mut background_events: MessageWriter<UpdateBackgroundTransform>,
     mut dimensions: ResMut<Dimensions>,
     mut exit_state: ResMut<ExitState>,
     mut game_state: ResMut<GameState>,
@@ -524,7 +517,7 @@ Position=2,1
 }
 
 fn load_relative_level(
-    trigger: Trigger<LoadRelativeLevel>,
+    trigger: On<LoadRelativeLevel>,
     mut commands: Commands,
     game_state: Res<GameState>,
 ) {
@@ -534,7 +527,7 @@ fn load_relative_level(
 }
 
 fn reset_level(
-    _trigger: Trigger<ResetLevel>,
+    _trigger: On<ResetLevel>,
     mut game_state: ResMut<GameState>,
     mut levels: ResMut<Levels>,
 ) {
@@ -545,7 +538,7 @@ fn reset_level(
 
 #[expect(clippy::type_complexity)]
 fn save_level(
-    trigger: Trigger<SaveLevel>,
+    trigger: On<SaveLevel>,
     mut levels: ResMut<Levels>,
     dimensions: Res<Dimensions>,
     game_state: Res<GameState>,
@@ -626,7 +619,7 @@ fn spawn_level_objects(
 }
 
 fn spawn_object(
-    trigger: Trigger<SpawnObject>,
+    trigger: On<SpawnObject>,
     mut commands: Commands,
     background_query: Query<Entity, With<Background>>,
     assets: Res<GameObjectAssets>,
