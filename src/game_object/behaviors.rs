@@ -334,6 +334,7 @@ pub fn check_for_slippery_and_transporter(
                 &dimensions,
                 collision_objects.into_iter().map(|(.., object)| object),
                 object.weight.copied().unwrap_or_default(),
+                MoveObjectInitiator::Slippery,
             ) {
                 Ok(()) => {
                     already_moved.insert(*transportee);
@@ -367,6 +368,7 @@ pub fn check_for_slippery_and_transporter(
                 &dimensions,
                 collision_objects.into_iter().map(|(.., object)| object),
                 object.weight.copied().unwrap_or_default(),
+                MoveObjectInitiator::Transporter,
             ) {
                 Ok(()) => {
                     already_moved.insert(*transportee);
@@ -545,6 +547,7 @@ pub fn move_objects(
                     &dimensions,
                     collision_objects_query.iter_mut().map(Into::into),
                     weight.copied().unwrap_or_default(),
+                    MoveObjectInitiator::Movable,
                 )
                 .is_err_and(MoveObjectError::is_collision)
                 {
@@ -558,6 +561,7 @@ pub fn move_objects(
                     &dimensions,
                     collision_objects_query.iter_mut().map(Into::into),
                     weight.copied().unwrap_or_default(),
+                    MoveObjectInitiator::Movable,
                 );
                 match move_result {
                     Ok(()) => {
@@ -570,6 +574,7 @@ pub fn move_objects(
                             &dimensions,
                             collision_objects_query.iter_mut().map(Into::into),
                             weight.copied().unwrap_or_default(),
+                            MoveObjectInitiator::Movable,
                         )
                         .is_err_and(MoveObjectError::is_collision)
                         {
@@ -599,12 +604,37 @@ impl MoveObjectError {
     }
 }
 
+#[derive(Clone, Copy)]
+pub enum MoveObjectInitiator {
+    Movable,
+    Player,
+    Slippery,
+    Transporter,
+}
+
+impl MoveObjectInitiator {
+    /// Returns whether the initiator is considered to be pushing the object.
+    ///
+    /// If the action is considered a push, it can still push other objects too,
+    /// but it will be blocked by objects that have the [`BlocksPushes`]
+    /// component.
+    fn is_pushing(self) -> bool {
+        match self {
+            MoveObjectInitiator::Movable => false,
+            MoveObjectInitiator::Player => false,
+            MoveObjectInitiator::Slippery => true,
+            MoveObjectInitiator::Transporter => true,
+        }
+    }
+}
+
 pub fn move_object<'a>(
     object_position: &mut Mut<Position>,
     direction: Direction,
     dimensions: &Dimensions,
     collision_objects: impl Iterator<Item = CollisionObject<'a>>,
     max_weight: Weight,
+    initiator: MoveObjectInitiator,
 ) -> Result<(), MoveObjectError> {
     let (dx, dy) = direction.as_delta();
     let new_x = object_position.x + dx;
@@ -666,6 +696,10 @@ pub fn move_object<'a>(
         }
 
         if collision_object.has_position((new_x, new_y).into()) {
+            if initiator.is_pushing() && collision_object.blocks_pushes() {
+                return Err(MoveObjectError::ObjectCollision);
+            }
+
             let can_push_to_or_mix_or_open_or_paint = |x: i16, y: i16| -> bool {
                 can_push_to(x, y)
                     || can_mix_with(x, y, collision_object.object_type())

@@ -73,6 +73,10 @@ impl CollisionObject<'_> {
             .is_some_and(|blocks| **blocks == BlocksMovement::Enabled)
     }
 
+    pub fn blocks_pushes(&self) -> bool {
+        self.blocks_pushes.is_some()
+    }
+
     pub fn can_mix_with(&self, other: ObjectType) -> bool {
         self.object_type.mix_with(other).is_some()
     }
@@ -82,7 +86,7 @@ impl CollisionObject<'_> {
     }
 
     pub fn can_push_on(&self) -> bool {
-        self.massive.is_none() && self.pushable.is_none() && self.blocks_pushes.is_none()
+        self.massive.is_none() && self.pushable.is_none() && !self.blocks_pushes()
     }
 
     pub fn has_position(&self, position: Position) -> bool {

@@ -407,6 +407,7 @@ fn on_game_event(
                         &dimensions,
                         collision_objects_query.iter_mut().map(Into::into),
                         weight.copied().unwrap_or_default(),
+                        MoveObjectInitiator::Player,
                     )
                     .is_ok()
                     {
