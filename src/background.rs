@@ -3,9 +3,9 @@ use std::time::Duration;
 use bevy::prelude::*;
 
 use crate::{
-    constants::*, editor::EditorState, levels::*, load_level, menu::MenuState, on_player_moved,
-    on_resize, ui_state::UiState, utils::load_repeating_asset, ExitState, LoadLevel, Player,
-    Position,
+    ExitState, LoadLevel, Player, Position, constants::*, editor::EditorState, levels::*,
+    load_level, menu::MenuState, on_player_moved, on_resize, ui_state::UiState,
+    utils::load_repeating_asset,
 };
 
 const BACKGROUND_ASSET: &[u8] = include_bytes!("../assets/sprites/background.png");
@@ -197,7 +197,7 @@ fn on_background_transform_animation(
     mut commands: Commands,
     mut background_query: Query<&mut Transform, With<Background>>,
     mut animation: ResMut<BackgroundTransformAnimation>,
-    exit_state: Res<ExitState>,
+    mut exit_state: ResMut<ExitState>,
     time: Res<Time<Virtual>>,
 ) -> Result<()> {
     let BackgroundTransformAnimation::Active {
@@ -220,8 +220,9 @@ fn on_background_transform_animation(
     if timer.is_finished() {
         *animation = BackgroundTransformAnimation::Paused;
 
-        if let Some(next_level) = exit_state.next_level {
+        if let Some(next_level) = exit_state.next_level_after_background_transform {
             commands.trigger(LoadLevel(next_level));
+            exit_state.next_level_after_background_transform = None;
         }
     }
 

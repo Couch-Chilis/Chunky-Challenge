@@ -1,22 +1,22 @@
 use std::{cmp::Ordering, collections::BTreeSet};
 
 use bevy::prelude::*;
-use rand::{rng, Rng};
+use rand::{Rng, rng};
 
 use crate::{
+    ExitState, PressedTriggers, SaveLevel, SpawnObject,
     background::UpdateBackgroundTransform,
     editor::EditorState,
     game_object::Pushable,
     game_state::GameState,
     levels::{Dimensions, InitialPositionAndMetadata},
     timers::{AnimationTimer, MovementTimer, TemporaryTimer, TransporterTimer},
-    ExitState, PressedTriggers, SaveLevel, SpawnObject,
 };
 
 use super::{
+    ObjectType,
     collission_object::{CollisionObject, CollisionObjectQuery},
     components::{Animatable, Direction, Trigger, *},
-    ObjectType,
 };
 
 pub fn animate_objects(
@@ -70,7 +70,7 @@ pub fn check_for_entrance(
                 commands.trigger(SaveLevel {
                     save_to_disk: false,
                 });
-                exit_state.next_level = Some(entrance.0);
+                exit_state.next_level_after_background_transform = Some(entrance.level());
                 background_events.write(UpdateBackgroundTransform::LevelExit);
                 return;
             }
@@ -94,7 +94,7 @@ pub fn check_for_exit(
             if player_position.as_ref() == exit_position {
                 let finished_level = game_state.current_level;
                 game_state.finished_levels.insert(finished_level);
-                exit_state.next_level = Some(0);
+                exit_state.next_level_after_background_transform = Some(0);
                 background_events.write(UpdateBackgroundTransform::LevelExit);
                 return;
             }
@@ -136,23 +136,27 @@ pub fn check_for_finished_levels(
     game_state: Res<GameState>,
 ) {
     for (entrance, mut sprite) in &mut entrance_query {
-        if game_state.finished_levels.contains(&entrance.0) {
-            if let Some(atlas) = sprite.texture_atlas.as_mut() {
-                atlas.index = 1;
-            }
+        if game_state.finished_levels.contains(&entrance.level())
+            && let Some(atlas) = sprite.texture_atlas.as_mut()
+        {
+            atlas.index = 1;
         }
     }
     for (entity, openable, massive, mut sprite) in &mut openable_query {
         if let Openable::LevelFinished(level) = openable {
             let opened = game_state.finished_levels.contains(level);
-            if opened && massive.is_some() {
-                commands.entity(entity).remove::<Massive>();
+            if opened {
+                if massive.is_some() {
+                    commands.entity(entity).remove::<Massive>();
+                }
 
                 if let Some(atlas) = sprite.texture_atlas.as_mut() {
                     atlas.index = 1;
                 }
-            } else if !opened && massive.is_none() {
-                commands.entity(entity).insert(Massive);
+            } else {
+                if massive.is_none() {
+                    commands.entity(entity).insert(Massive);
+                }
 
                 if let Some(atlas) = sprite.texture_atlas.as_mut() {
                     atlas.index = 0;
@@ -175,13 +179,12 @@ pub fn check_for_key(
             if matches!(openable, Openable::Key)
                 && key_position == openable_position
                 && massive.is_some()
+                && let Some(atlas) = sprite.texture_atlas.as_mut()
             {
                 commands.entity(key_entity).despawn();
                 commands.entity(openable_entity).remove::<Massive>();
 
-                if let Some(atlas) = sprite.texture_atlas.as_mut() {
-                    atlas.index = 1;
-                }
+                atlas.index = 1;
             }
         }
     }
@@ -248,15 +251,16 @@ pub fn check_for_paint(
         }
 
         for (other_entity, other_type, other_position) in &all_paint_query {
-            if paint_entity != other_entity && paint_position == other_position {
-                if let Some(mixed_type) = paint_type.mix_with(*other_type) {
-                    commands.entity(paint_entity).despawn();
-                    commands.entity(other_entity).despawn();
-                    commands.trigger(SpawnObject {
-                        object_type: mixed_type,
-                        position: paint_position.into(),
-                    });
-                }
+            if paint_entity != other_entity
+                && paint_position == other_position
+                && let Some(mixed_type) = paint_type.mix_with(*other_type)
+            {
+                commands.entity(paint_entity).despawn();
+                commands.entity(other_entity).despawn();
+                commands.trigger(SpawnObject {
+                    object_type: mixed_type,
+                    position: paint_position.into(),
+                });
             }
         }
     }
@@ -416,36 +420,34 @@ pub fn check_for_teleporter(
         })
         .partition(|(position, ..)| position.is_changed());
 
-    for (ref mut position, ..) in &mut moved_objects {
+    for (position, ..) in &mut moved_objects {
         for (teleporter_position, teleporter) in &teleporters_query {
-            if position.as_ref() == teleporter_position {
-                if let Some((target_position, _)) =
+            if position.as_ref() == teleporter_position
+                && let Some((target_position, _)) =
                     teleporters_query
                         .iter()
                         .find(|(target_position, target_teleporter)| {
                             *target_position != teleporter_position
                                 && *target_teleporter == teleporter
                         })
-                {
-                    if !possible_collisions.iter().any(|(position, _, massive)| {
-                        position.as_ref() == target_position && massive.is_some()
-                    }) {
-                        commands.trigger(SpawnObject {
-                            object_type: ObjectType::Flash,
-                            position: position.as_ref().into(),
-                        });
-                        commands.trigger(SpawnObject {
-                            object_type: ObjectType::Flash,
-                            position: target_position.into(),
-                        });
-                        if temporary_timer.is_finished() {
-                            temporary_timer.reset();
-                        }
-
-                        *position.as_mut() = *target_position;
-                        break;
-                    }
+                && !possible_collisions.iter().any(|(position, _, massive)| {
+                    position.as_ref() == target_position && massive.is_some()
+                })
+            {
+                commands.trigger(SpawnObject {
+                    object_type: ObjectType::Flash,
+                    position: position.as_ref().into(),
+                });
+                commands.trigger(SpawnObject {
+                    object_type: ObjectType::Flash,
+                    position: target_position.into(),
+                });
+                if temporary_timer.is_finished() {
+                    temporary_timer.reset();
                 }
+
+                *position.as_mut() = *target_position;
+                break;
             }
         }
     }
@@ -494,14 +496,18 @@ pub fn check_for_triggers(
     };
 
     for (entity, massive, mut image_node) in openables {
-        if opened && massive.is_some() {
-            commands.entity(entity).remove::<Massive>();
+        if opened {
+            if massive.is_some() {
+                commands.entity(entity).remove::<Massive>();
+            }
 
             if let Some(atlas) = image_node.texture_atlas.as_mut() {
                 atlas.index = 1;
             }
-        } else if !opened && massive.is_none() {
-            commands.entity(entity).insert(Massive);
+        } else {
+            if massive.is_none() {
+                commands.entity(entity).insert(Massive);
+            }
 
             if let Some(atlas) = image_node.texture_atlas.as_mut() {
                 atlas.index = 0;
@@ -729,10 +735,10 @@ pub fn move_object<'a>(
     }
 
     for collission_object in &mut collision_objects {
-        if collission_object.has_position(**object_position) {
-            if let Some(blocks_movement) = collission_object.blocks_movement.as_mut() {
-                **blocks_movement = BlocksMovement::Enabled;
-            }
+        if collission_object.has_position(**object_position)
+            && let Some(blocks_movement) = collission_object.blocks_movement.as_mut()
+        {
+            **blocks_movement = BlocksMovement::Enabled;
         }
     }
 

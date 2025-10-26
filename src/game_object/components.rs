@@ -145,7 +145,21 @@ pub struct Deadly;
 
 /// An entrance to another level.
 #[derive(Component, Debug)]
-pub struct Entrance(pub u16);
+pub struct Entrance(u16);
+
+impl Entrance {
+    pub fn for_level(level: u16) -> Self {
+        Self(level)
+    }
+
+    pub fn adjust_level(&mut self, delta: i16) {
+        self.0 = self.0.saturating_add_signed(delta);
+    }
+
+    pub fn level(&self) -> u16 {
+        self.0
+    }
+}
 
 /// An exit completes the level when stepped on.
 #[derive(Component, Debug)]
@@ -211,6 +225,16 @@ pub enum Openable {
 
     /// Entity opens when a [Trigger] is pressed.
     Trigger,
+}
+
+impl Openable {
+    pub fn level(&self) -> Option<u16> {
+        match self {
+            Openable::Key => None,
+            Openable::LevelFinished(level) => Some(*level),
+            Openable::Trigger => None,
+        }
+    }
 }
 
 /// Entity is controlled by the player.

@@ -3,11 +3,11 @@ use bevy::prelude::*;
 use crate::{constants::ENTRANCE_TEXT, fonts::Fonts, levels::InitialPositionAndMetadata};
 
 use super::{
-    assets::GameObjectAssets,
-    components::{Exit, Liquid, Massive, Player, Pushable},
     Animatable, BlocksMovement, BlocksPushes, Deadly, Entrance, Explosive, Floatable, Immovable,
     Key, Movable, ObjectType, Openable, Paint, Paintable, Slippery, Teleporter, TransformOnPush,
     Transporter, Trigger, Volatile, Weight,
+    assets::GameObjectAssets,
+    components::{Exit, Liquid, Massive, Player, Pushable},
 };
 
 pub struct BlueBlock;
@@ -126,10 +126,11 @@ impl Door {
         initial_position: InitialPositionAndMetadata,
     ) -> EntityCommands<'a> {
         let InitialPositionAndMetadata {
-            direction,
+            direction: _,
+            identifier: _,
+            level: _,
             open,
             position,
-            ..
         } = initial_position;
 
         let openable = Openable::Key;
@@ -145,7 +146,6 @@ impl Door {
         if open {
             spawner.spawn((
                 ObjectType::Door,
-                direction,
                 Immovable,
                 openable,
                 position,
@@ -173,24 +173,32 @@ impl Entrance {
         fonts: &Fonts,
         initial_position: InitialPositionAndMetadata,
     ) -> EntityCommands<'a> {
+        let InitialPositionAndMetadata {
+            direction: _,
+            identifier: _,
+            level,
+            open,
+            position,
+        } = initial_position;
+        let level = level.unwrap_or_default();
+
         let mut commands = spawner.spawn((
             ObjectType::Entrance,
             BlocksPushes,
-            initial_position.direction,
-            Entrance(initial_position.level.unwrap_or_default()),
-            initial_position.position,
+            Entrance::for_level(level),
+            position,
             Sprite::from_atlas_image(
                 assets.entrance.0.clone(),
                 TextureAtlas {
                     layout: assets.entrance.1.clone(),
-                    index: 0,
+                    index: if open { 1 } else { 0 },
                 },
             ),
             Transform::from_translation(Vec3::new(0., 0., 1.)),
         ));
         commands.with_children(|cb| {
             cb.spawn((
-                Text2d::new(initial_position.level.unwrap_or_default().to_string()),
+                Text2d::new(level.to_string()),
                 TextColor(ENTRANCE_TEXT),
                 TextFont::from(fonts.poppins_light.clone()).with_font_size(24.),
                 Transform::from_translation(Vec3::new(0., 0., 1.)),
@@ -260,11 +268,11 @@ impl Gate {
         initial_position: InitialPositionAndMetadata,
     ) -> EntityCommands<'a> {
         let InitialPositionAndMetadata {
-            direction,
+            direction: _,
+            identifier: _,
             level,
             open,
             position,
-            ..
         } = initial_position;
 
         let openable = if let Some(level) = level {
@@ -284,7 +292,6 @@ impl Gate {
         if open {
             spawner.spawn((
                 ObjectType::Gate,
-                direction,
                 Immovable,
                 openable,
                 position,
@@ -294,7 +301,6 @@ impl Gate {
         } else {
             spawner.spawn((
                 ObjectType::Gate,
-                direction,
                 Immovable,
                 Massive,
                 openable,

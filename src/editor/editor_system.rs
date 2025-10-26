@@ -1,6 +1,7 @@
 use bevy::{prelude::*, window::PrimaryWindow};
 
 use crate::{
+    Background, ChangeZoom, LoadRelativeLevel, ResetLevel, SaveLevel, SpawnObject,
     background::UpdateBackgroundTransform,
     constants::*,
     fonts::Fonts,
@@ -9,14 +10,13 @@ use crate::{
     timers::{MovementTimer, TemporaryTimer, TransporterTimer},
     ui_state::UiState,
     utils::level_coords_from_pointer_coords,
-    Background, ChangeZoom, LoadRelativeLevel, ResetLevel, SaveLevel, SpawnObject,
 };
 
 use super::{
-    editor_button::EditorButton, number_input::NumberInput, ActivateSelection, ChangeHeight,
-    ChangeIdentifier, ChangeLevel, ChangeWidth, DeselectObject, Editor, EditorObjectType,
-    EditorState, IdentifierInput, Input, LevelInput, MoveAllObjects, SelectObject,
-    SelectionOverlay, SelectionState, ToggleEditor, ToggleSelection,
+    ActivateSelection, ChangeHeight, ChangeIdentifier, ChangeLevel, ChangeWidth, DeselectObject,
+    Editor, EditorObjectType, EditorState, IdentifierInput, Input, LevelInput, MoveAllObjects,
+    SelectObject, SelectionOverlay, SelectionState, ToggleEditor, ToggleSelection,
+    editor_button::EditorButton, number_input::NumberInput,
 };
 
 pub fn on_editor_button_interaction(
@@ -370,7 +370,7 @@ pub fn on_select_object(
 
     let (input_to_update, value) = if let Some(entrance) = entrance {
         level_input_query.single_mut()?.display = Display::Flex;
-        (Input::Level, entrance.0)
+        (Input::Level, entrance.level())
     } else if let Some(teleporter) = teleporter {
         identifier_input_query.single_mut()?.display = Display::Flex;
         (Input::Identifier, teleporter.0)
@@ -567,7 +567,7 @@ pub fn change_level(
         return;
     };
 
-    entrance.0 = entrance.0.saturating_add_signed(*delta);
+    entrance.adjust_level(*delta);
 
     // Respawn to update the entrance text:
     commands.entity(entity).despawn();
@@ -577,14 +577,14 @@ pub fn change_level(
             position: *position,
             direction: Default::default(),
             identifier: None,
-            level: Some(entrance.0),
+            level: Some(entrance.level()),
             open: false,
         },
     });
 
     for (input, number_input, mut text) in &mut input_query {
         if *input == Input::Level && *number_input == NumberInput::Value {
-            text.0 = entrance.0.to_string();
+            text.0 = entrance.level().to_string();
         }
     }
 }
@@ -620,14 +620,12 @@ pub fn move_all_objects(
             top_left,
             bottom_right,
         } = editor_state.selection
-        {
-            if position.x < top_left.x
+            && (position.x < top_left.x
                 || position.x > bottom_right.x
                 || position.y < top_left.y
-                || position.y > bottom_right.y
-            {
-                continue;
-            }
+                || position.y > bottom_right.y)
+        {
+            continue;
         }
 
         position.x += *dx;

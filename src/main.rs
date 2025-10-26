@@ -24,20 +24,19 @@ use bevy::{
 };
 use constants::*;
 use editor::{
-    on_editor_keyboard_input, on_editor_mouse_input, EditorPlugin, EditorState, SelectionOverlay,
-    ToggleEditor,
+    EditorPlugin, EditorState, SelectionOverlay, ToggleEditor, on_editor_keyboard_input,
+    on_editor_mouse_input,
 };
 use fonts::Fonts;
 use game_object::{
-    behaviors::*, spawn_object_of_type, CollisionObjectQuery, Direction, Entrance,
-    GameObjectAssets, Massive, ObjectType, Openable, Player, Position, Teleporter, Weight,
-    PLAYER_ASSET,
+    CollisionObjectQuery, Direction, Entrance, GameObjectAssets, Massive, ObjectType, Openable,
+    PLAYER_ASSET, Player, Position, Teleporter, Weight, behaviors::*, spawn_object_of_type,
 };
 use game_state::GameState;
 use gameover::{check_for_game_over, setup_gameover};
 use image::ImageFormat;
 use levels::{Dimensions, InitialPositionAndMetadata, Level, Levels};
-use menu::{on_menu_keyboard_input, MenuKind, MenuPlugin, MenuState};
+use menu::{MenuKind, MenuPlugin, MenuState, on_menu_keyboard_input};
 use timers::{AnimationTimer, MovementTimer, TemporaryTimer, TransporterTimer};
 use ui_state::UiState;
 use utils::get_level_path;
@@ -45,7 +44,7 @@ use winit::window::Icon;
 
 #[derive(Default, Resource)]
 struct ExitState {
-    next_level: Option<u16>,
+    next_level_after_background_transform: Option<u16>,
 }
 
 #[derive(Default, Resource)]
@@ -307,7 +306,7 @@ fn on_keyboard_input(
     } else if menu_state.is_open() {
         on_menu_keyboard_input(commands, app_exit_events, menu_state, keys);
         return;
-    } else if exit_state.next_level.is_some() {
+    } else if exit_state.next_level_after_background_transform.is_some() {
         return;
     }
 
@@ -447,7 +446,6 @@ fn load_level(
     mut background_query: Query<Entity, With<Background>>,
     mut background_events: MessageWriter<UpdateBackgroundTransform>,
     mut dimensions: ResMut<Dimensions>,
-    mut exit_state: ResMut<ExitState>,
     mut game_state: ResMut<GameState>,
     mut pressed_triggers: ResMut<PressedTriggers>,
     assets: Res<GameObjectAssets>,
@@ -485,11 +483,11 @@ Position=2,1
             })
             .map(|entrance| entrance.position);
 
-        if let Some(entrance_position) = entrance_position {
-            if let Some(players) = level.objects.get_mut(&ObjectType::Player) {
-                for player in players {
-                    player.position = entrance_position;
-                }
+        if let Some(entrance_position) = entrance_position
+            && let Some(players) = level.objects.get_mut(&ObjectType::Player)
+        {
+            for player in players {
+                player.position = entrance_position;
             }
         }
     }
@@ -504,8 +502,6 @@ Position=2,1
     pressed_triggers.num_pressed_triggers = 0;
 
     *dimensions = level.dimensions;
-
-    exit_state.next_level = None;
 
     background_events.write(if menu_state.is_in_hub_menu() {
         UpdateBackgroundTransform::Immediate
@@ -545,7 +541,7 @@ fn save_level(
     objects_query: Query<(
         &ObjectType,
         &Position,
-        &Direction,
+        Option<&Direction>,
         Option<&Entrance>,
         Option<&Massive>,
         Option<&Openable>,
@@ -566,15 +562,11 @@ fn save_level(
             let positions = objects.entry(*object_type).or_insert(Vec::new());
             positions.push(InitialPositionAndMetadata {
                 position: *position,
-                direction: *direction,
+                direction: direction.map_or_else(Default::default, |direction| *direction),
                 identifier: teleporter.map(|teleporter| teleporter.0),
-                level: entrance.map(|entrance| entrance.0).or_else(|| {
-                    openable.and_then(|openable| match openable {
-                        Openable::Key => None,
-                        Openable::LevelFinished(level) => Some(*level),
-                        Openable::Trigger => None,
-                    })
-                }),
+                level: entrance
+                    .map(Entrance::level)
+                    .or_else(|| openable.and_then(Openable::level)),
                 open: openable.is_some() && massive.is_none(),
             });
         }

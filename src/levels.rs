@@ -1,7 +1,7 @@
 use std::{
     borrow::Cow,
     cmp::Ordering,
-    collections::{btree_map::Entry, BTreeMap},
+    collections::{BTreeMap, btree_map::Entry},
     fmt::Write,
     str::FromStr,
 };
@@ -321,26 +321,26 @@ impl Level {
                     current_direction = direction;
                 }
 
-                if let Some(identifier) = identifier {
-                    if identifier != current_identifier {
-                        if !content.ends_with('\n') {
-                            content.push('\n');
-                        }
-
-                        writeln!(content, "Identifier={identifier}").expect("writing failed");
-                        current_identifier = identifier;
+                if let Some(identifier) = identifier
+                    && identifier != current_identifier
+                {
+                    if !content.ends_with('\n') {
+                        content.push('\n');
                     }
+
+                    writeln!(content, "Identifier={identifier}").expect("writing failed");
+                    current_identifier = identifier;
                 }
 
-                if let Some(level) = level {
-                    if level != current_level {
-                        if !content.ends_with('\n') {
-                            content.push('\n');
-                        }
-
-                        writeln!(content, "Level={level}").expect("writing failed");
-                        current_level = level;
+                if let Some(level) = level
+                    && level != current_level
+                {
+                    if !content.ends_with('\n') {
+                        content.push('\n');
                     }
+
+                    writeln!(content, "Level={level}").expect("writing failed");
+                    current_level = level;
                 }
 
                 if open != current_open {
