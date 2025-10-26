@@ -331,6 +331,7 @@ pub fn check_for_slippery_and_transporter(
 
         if let Some((transportee, .., object)) = transportees.first_mut() {
             match move_object(
+                object.into(),
                 &mut object.position,
                 *object.direction,
                 &dimensions,
@@ -365,6 +366,7 @@ pub fn check_for_slippery_and_transporter(
 
         if let Some((transportee, .., object)) = transportees.first_mut() {
             match move_object(
+                object.into(),
                 &mut object.position,
                 *direction,
                 &dimensions,
@@ -528,8 +530,15 @@ pub fn despawn_volatile_objects(
     }
 }
 
+#[expect(clippy::type_complexity)]
 pub fn move_objects(
-    mut movable_query: Query<(&mut Direction, &Movable, &mut Position, Option<&Weight>)>,
+    mut movable_query: Query<(
+        &mut Direction,
+        &Movable,
+        &mut Position,
+        Option<&Deadly>,
+        Option<&Weight>,
+    )>,
     mut collision_objects_query: Query<CollisionObjectQuery, Without<Movable>>,
     mut timer: ResMut<MovementTimer>,
     dimensions: Res<Dimensions>,
@@ -540,10 +549,17 @@ pub fn move_objects(
         return;
     }
 
-    for (mut direction, movable, mut position, weight) in &mut movable_query {
+    for (mut direction, movable, mut position, deadly, weight) in &mut movable_query {
+        let subject = if deadly.is_some() {
+            MoveObjectSubject::Deadly
+        } else {
+            MoveObjectSubject::Other
+        };
+
         match movable {
             Movable::Bounce => {
                 if move_object(
+                    subject,
                     &mut position,
                     *direction,
                     &dimensions,
@@ -558,6 +574,7 @@ pub fn move_objects(
             }
             Movable::FollowRightHand => {
                 let move_result = move_object(
+                    subject,
                     &mut position,
                     direction.right_hand(),
                     &dimensions,
@@ -571,6 +588,7 @@ pub fn move_objects(
                     }
                     Err(err) if err.is_collision() => {
                         if move_object(
+                            subject,
                             &mut position,
                             *direction,
                             &dimensions,
@@ -630,7 +648,37 @@ impl MoveObjectInitiator {
     }
 }
 
+#[derive(Clone, Copy)]
+pub enum MoveObjectSubject {
+    Deadly,
+    Player,
+    Other,
+}
+
+impl From<&mut CollisionObject<'_>> for MoveObjectSubject {
+    fn from(value: &mut CollisionObject<'_>) -> Self {
+        if value.is_deadly() {
+            Self::Deadly
+        } else if value.is_player() {
+            Self::Player
+        } else {
+            Self::Other
+        }
+    }
+}
+
+impl MoveObjectSubject {
+    fn is_deadly(self) -> bool {
+        matches!(self, Self::Player)
+    }
+
+    fn is_player(self) -> bool {
+        matches!(self, Self::Player)
+    }
+}
+
 pub fn move_object<'a>(
+    subject: MoveObjectSubject,
     object_position: &mut Mut<Position>,
     direction: Direction,
     dimensions: &Dimensions,
@@ -698,7 +746,11 @@ pub fn move_object<'a>(
         }
 
         if collision_object.has_position((new_x, new_y).into()) {
-            if initiator.is_pushing() && collision_object.blocks_pushes() {
+            if initiator.is_pushing()
+                && collision_object.blocks_pushes()
+                && !subject.is_player()
+                && !(subject.is_deadly() && collision_object.is_player())
+            {
                 return Err(MoveObjectError::ObjectCollision);
             }
 

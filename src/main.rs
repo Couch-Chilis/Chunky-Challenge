@@ -402,6 +402,7 @@ fn on_game_event(
                     ui_state.camera_offset = Default::default();
 
                     if move_object(
+                        MoveObjectSubject::Player,
                         &mut position,
                         *direction,
                         &dimensions,

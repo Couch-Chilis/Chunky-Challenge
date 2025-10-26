@@ -1,10 +1,11 @@
 use bevy::prelude::*;
 
-use super::{components::*, ObjectType};
+use super::{ObjectType, components::*};
 
 pub type CollisionObjectQuery<'a> = (
     Option<Mut<'a, BlocksMovement>>,
     Option<&'a BlocksPushes>,
+    Option<&'a Deadly>,
     Mut<'a, Direction>,
     Option<&'a Key>,
     Option<&'a Massive>,
@@ -12,6 +13,7 @@ pub type CollisionObjectQuery<'a> = (
     Option<&'a Openable>,
     Option<&'a Paint>,
     Option<&'a Paintable>,
+    Option<&'a Player>,
     Mut<'a, Position>,
     Option<&'a Pushable>,
     Option<&'a Weight>,
@@ -20,6 +22,7 @@ pub type CollisionObjectQuery<'a> = (
 pub struct CollisionObject<'a> {
     pub(super) blocks_movement: Option<Mut<'a, BlocksMovement>>,
     blocks_pushes: Option<&'a BlocksPushes>,
+    deadly: Option<&'a Deadly>,
     pub(super) direction: Mut<'a, Direction>,
     key: Option<&'a Key>,
     massive: Option<&'a Massive>,
@@ -27,6 +30,7 @@ pub struct CollisionObject<'a> {
     openable: Option<&'a Openable>,
     paint: Option<&'a Paint>,
     paintable: Option<&'a Paintable>,
+    player: Option<&'a Player>,
     pub(super) position: Mut<'a, Position>,
     pushable: Option<&'a Pushable>,
     pub(super) weight: Option<&'a Weight>,
@@ -37,6 +41,7 @@ impl<'a> From<CollisionObjectQuery<'a>> for CollisionObject<'a> {
         let (
             blocks_movement,
             blocks_pushes,
+            deadly,
             direction,
             key,
             massive,
@@ -44,6 +49,7 @@ impl<'a> From<CollisionObjectQuery<'a>> for CollisionObject<'a> {
             openable,
             paint,
             paintable,
+            player,
             position,
             pushable,
             weight,
@@ -52,6 +58,7 @@ impl<'a> From<CollisionObjectQuery<'a>> for CollisionObject<'a> {
         Self {
             blocks_movement,
             blocks_pushes,
+            deadly,
             direction,
             key,
             massive,
@@ -59,6 +66,7 @@ impl<'a> From<CollisionObjectQuery<'a>> for CollisionObject<'a> {
             openable,
             paint,
             paintable,
+            player,
             position,
             pushable,
             weight,
@@ -93,6 +101,10 @@ impl CollisionObject<'_> {
         self.position.as_ref() == &position
     }
 
+    pub fn is_deadly(&self) -> bool {
+        self.deadly.is_some()
+    }
+
     pub fn is_key(&self) -> bool {
         self.key.is_some()
     }
@@ -107,6 +119,10 @@ impl CollisionObject<'_> {
 
     pub fn is_paintable(&self) -> bool {
         self.paintable.is_some()
+    }
+
+    pub fn is_player(&self) -> bool {
+        self.player.is_some()
     }
 
     pub fn is_pushable(&self) -> bool {
