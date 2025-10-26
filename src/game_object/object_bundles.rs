@@ -1,6 +1,9 @@
 use bevy::prelude::*;
 
-use crate::{constants::ENTRANCE_TEXT, fonts::Fonts, levels::InitialPositionAndMetadata};
+use crate::{
+    constants::ENTRANCE_TEXT, fonts::Fonts, game_object::DirectionalSprite,
+    levels::InitialPositionAndMetadata,
+};
 
 use super::{
     Animatable, BlocksMovement, BlocksPushes, Deadly, Entrance, Explosive, Floatable, Immovable,
@@ -101,6 +104,7 @@ impl Creature1 {
             ObjectType::Creature1,
             BlocksPushes,
             Deadly,
+            DirectionalSprite,
             initial_position.direction,
             Movable::FollowRightHand,
             initial_position.position,
@@ -545,6 +549,7 @@ impl Transporter {
         (
             ObjectType::Transporter,
             BlocksMovement::Enabled,
+            DirectionalSprite,
             initial_position.direction,
             initial_position.position,
             Sprite::from_atlas_image(

@@ -1,15 +1,14 @@
 use bevy::prelude::*;
 
 use crate::{
-    background::UpdateBackgroundTransform, constants::*, editor::ToggleEditor, fonts::Fonts, setup,
-    LoadLevel, ResetLevel,
+    LoadLevel, LoadRelativeLevel, background::UpdateBackgroundTransform, constants::*,
+    editor::ToggleEditor, fonts::Fonts, setup,
 };
 
 pub const MENU_WIDTH: f32 = 500.;
-pub const MENU_HEIGHT: f32 = 400.;
-
-const NUM_HUB_BUTTONS: usize = 4;
-const NUM_LEVEL_BUTTONS: usize = 4;
+pub const MENU_BUTTON_GAP: f32 = 40.;
+pub const MENU_BUTTON_HEIGHT: f32 = 60.;
+pub const MENU_BUTTON_WIDTH: f32 = 300.;
 
 #[derive(Component)]
 pub struct Menu {
@@ -28,7 +27,7 @@ pub struct MenuState {
 impl Default for MenuState {
     fn default() -> Self {
         Self {
-            open_menu: Some(MenuKind::Hub),
+            open_menu: Some(MenuKind::Start),
             selected_button: MenuButtonKind::Start,
         }
     }
@@ -39,37 +38,34 @@ impl MenuState {
         self.open_menu.is_some()
     }
 
-    pub fn is_in_hub_menu(&self) -> bool {
-        self.open_menu == Some(MenuKind::Hub)
+    pub fn is_in_start_menu(&self) -> bool {
+        self.open_menu == Some(MenuKind::Start)
     }
 
-    fn move_selected_button(&mut self, delta: isize) {
-        let kinds = if self.is_in_hub_menu() {
-            MenuButtonKind::hub_buttons()
-        } else {
-            MenuButtonKind::level_buttons()
-        };
+    fn move_selected_button(&mut self, menu_kind: MenuKind, delta: isize) {
+        let buttons = MenuButtonKind::buttons_for_menu(menu_kind);
 
-        let current_index = kinds
+        let current_index = buttons
             .iter()
             .position(|kind| *kind == self.selected_button)
             .unwrap_or_default() as isize;
-        let num_buttons = kinds.len() as isize;
+        let num_buttons = buttons.len() as isize;
         let new_index = (current_index + num_buttons + delta) % num_buttons;
-        self.selected_button = kinds[new_index as usize];
+        self.selected_button = buttons[new_index as usize];
     }
 
     pub fn set_open(&mut self, menu: MenuKind) {
         self.open_menu = Some(menu);
         self.selected_button = match menu {
-            MenuKind::Hub => MenuButtonKind::Start,
-            MenuKind::Level => MenuButtonKind::Restart,
+            MenuKind::Start => MenuButtonKind::Start,
+            MenuKind::Hub | MenuKind::Level => MenuButtonKind::Continue,
         };
     }
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum MenuKind {
+    Start,
     Hub,
     Level,
 }
@@ -89,7 +85,9 @@ impl Plugin for MenuPlugin {
 #[derive(Clone, Component, Copy, Eq, PartialEq)]
 enum MenuButtonKind {
     Start,
+    Continue,
     Restart,
+    RestartLevel,
     BackToHub,
     Editor,
     OtherGames,
@@ -97,18 +95,43 @@ enum MenuButtonKind {
 }
 
 impl MenuButtonKind {
-    fn hub_buttons() -> [Self; NUM_HUB_BUTTONS] {
-        [Self::Start, Self::Editor, Self::OtherGames, Self::Quit]
-    }
+    fn buttons_for_menu(menu_kind: MenuKind) -> &'static [Self] {
+        static START_BUTTONS: &[MenuButtonKind] = &[
+            MenuButtonKind::Start,
+            MenuButtonKind::Editor,
+            MenuButtonKind::OtherGames,
+            MenuButtonKind::Quit,
+        ];
 
-    fn level_buttons() -> [Self; NUM_LEVEL_BUTTONS] {
-        [Self::Restart, Self::BackToHub, Self::Editor, Self::Quit]
+        static HUB_BUTTONS: &[MenuButtonKind] = &[
+            MenuButtonKind::Continue,
+            MenuButtonKind::Restart,
+            MenuButtonKind::Editor,
+            MenuButtonKind::OtherGames,
+            MenuButtonKind::Quit,
+        ];
+
+        static LEVEL_BUTTONS: &[MenuButtonKind] = &[
+            MenuButtonKind::Continue,
+            MenuButtonKind::RestartLevel,
+            MenuButtonKind::BackToHub,
+            MenuButtonKind::Editor,
+            MenuButtonKind::Quit,
+        ];
+
+        match menu_kind {
+            MenuKind::Start => START_BUTTONS,
+            MenuKind::Hub => HUB_BUTTONS,
+            MenuKind::Level => LEVEL_BUTTONS,
+        }
     }
 
     fn label(self) -> &'static str {
         match self {
             Self::Start => "Start",
-            Self::Restart => "Restart Level",
+            Self::Continue => "Continue",
+            Self::Restart => "Restart",
+            Self::RestartLevel => "Restart Level",
             Self::BackToHub => "Exit Level",
             Self::Editor => "Level Editor",
             Self::OtherGames => "Other Games",
@@ -124,67 +147,40 @@ fn setup_menus(
 ) -> Result<()> {
     let window = window_query.single()?;
 
-    commands
-        .spawn((
-            Menu {
-                kind: MenuKind::Hub,
-            },
-            BackgroundColor(GRAY_BACKGROUND),
-            BorderColor::all(RED),
-            GlobalZIndex(100),
-            Node {
-                display: Display::Flex,
-                flex_direction: FlexDirection::Column,
-                align_items: AlignItems::Center,
-                justify_content: JustifyContent::Center,
-                width: Val::Px(MENU_WIDTH),
-                height: Val::Px(MENU_HEIGHT),
-                border: UiRect::all(Val::Px(2.)),
-                margin: UiRect::all(Val::Auto)
-                    .with_top(Val::Px(calculate_top_margin(window.size()))),
-                padding: UiRect::all(Val::Auto),
-                row_gap: Val::Px(40.),
-                position_type: PositionType::Absolute,
-                ..default()
-            },
-        ))
-        .with_children(|cb| {
-            for kind in MenuButtonKind::hub_buttons() {
-                cb.spawn(MenuButton::new(kind))
-                    .with_children(|cb| MenuButton::populate(cb, kind.label(), &fonts));
-            }
-        });
+    let menu_node = |num_buttons: usize| Node {
+        display: Display::Flex,
+        flex_direction: FlexDirection::Column,
+        align_items: AlignItems::Center,
+        justify_content: JustifyContent::Center,
+        width: Val::Px(MENU_WIDTH),
+        height: Val::Px(menu_height(num_buttons)),
+        border: UiRect::all(Val::Px(2.)),
+        margin: UiRect::all(Val::Auto)
+            .with_top(Val::Px(calculate_top_margin(window.size(), num_buttons))),
+        padding: UiRect::all(Val::Auto),
+        row_gap: Val::Px(40.),
+        position_type: PositionType::Absolute,
+        ..default()
+    };
 
-    commands
-        .spawn((
-            Menu {
-                kind: MenuKind::Level,
-            },
-            BackgroundColor(GRAY_BACKGROUND),
-            BorderColor::all(RED),
-            GlobalZIndex(100),
-            Node {
-                display: Display::Flex,
-                flex_direction: FlexDirection::Column,
-                align_items: AlignItems::Center,
-                justify_content: JustifyContent::Center,
-                width: Val::Px(MENU_WIDTH),
-                height: Val::Px(MENU_HEIGHT),
-                border: UiRect::all(Val::Px(2.)),
-                margin: UiRect::all(Val::Auto)
-                    .with_top(Val::Px(calculate_top_margin(window.size()))),
-                padding: UiRect::all(Val::Auto),
-                row_gap: Val::Px(40.),
-                position_type: PositionType::Absolute,
-                ..default()
-            },
-        ))
-        .with_children(|cb| {
-            for kind in MenuButtonKind::level_buttons() {
-                cb.spawn(MenuButton::new(kind))
-                    .with_children(|cb| MenuButton::populate(cb, kind.label(), &fonts));
-            }
-        });
+    for kind in [MenuKind::Start, MenuKind::Hub, MenuKind::Level] {
+        let buttons = MenuButtonKind::buttons_for_menu(kind);
+
+        commands
+            .spawn((
+                Menu { kind },
+                BackgroundColor(GRAY_BACKGROUND),
+                BorderColor::all(RED),
+                GlobalZIndex(100),
+                menu_node(buttons.len()),
+            ))
+            .with_children(|cb| {
+                for kind in buttons {
+                    cb.spawn(MenuButton::new(*kind))
+                        .with_children(|cb| MenuButton::populate(cb, kind.label(), &fonts));
+                }
+            });
+    }
 
     Ok(())
 }
@@ -226,8 +222,8 @@ impl MenuButton {
             Button,
             BackgroundColor(BLUE),
             Node {
-                height: Val::Px(60.),
-                width: Val::Px(300.),
+                height: Val::Px(MENU_BUTTON_HEIGHT),
+                width: Val::Px(MENU_BUTTON_WIDTH),
                 align_content: AlignContent::Center,
                 ..default()
             },
@@ -249,25 +245,24 @@ impl MenuButton {
 
 pub fn on_menu_keyboard_input(
     mut commands: Commands,
-    mut app_exit_events: MessageWriter<AppExit>,
     mut menu_state: ResMut<MenuState>,
     keys: Res<ButtonInput<KeyCode>>,
 ) {
-    if menu_state.open_menu.is_none() {
+    let Some(menu_kind) = menu_state.open_menu else {
         return;
-    }
+    };
 
     for key in keys.get_just_pressed() {
         use KeyCode::*;
         match key {
-            ArrowUp => menu_state.move_selected_button(-1),
-            ArrowDown => menu_state.move_selected_button(1),
+            ArrowUp => menu_state.move_selected_button(menu_kind, -1),
+            ArrowDown => menu_state.move_selected_button(menu_kind, 1),
             Enter | Space => {
                 commands.trigger(ButtonPress);
                 return;
             }
             Escape => {
-                app_exit_events.write(AppExit::Success);
+                menu_state.open_menu = None;
             }
 
             _ => continue,
@@ -296,12 +291,13 @@ fn on_menu_interaction_input(
 }
 
 fn on_resize(
-    mut menu_query: Query<&mut Node, With<Menu>>,
+    mut menu_query: Query<(&mut Node, &Menu)>,
     window_query: Query<&Window, Changed<Window>>,
 ) {
     for window in &window_query {
-        for mut node in &mut menu_query {
-            node.margin.top = Val::Px(calculate_top_margin(window.size()));
+        for (mut node, menu) in &mut menu_query {
+            let num_buttons = MenuButtonKind::buttons_for_menu(menu.kind).len();
+            node.margin.top = Val::Px(calculate_top_margin(window.size(), num_buttons));
         }
     }
 }
@@ -318,8 +314,11 @@ fn on_button_press(
             background_events.write(UpdateBackgroundTransform::HubIntro);
             menu_state.open_menu = None;
         }
-        MenuButtonKind::Restart => {
-            commands.trigger(ResetLevel);
+        MenuButtonKind::Continue => {
+            menu_state.open_menu = None;
+        }
+        MenuButtonKind::Restart | MenuButtonKind::RestartLevel => {
+            commands.trigger(LoadRelativeLevel(0));
             menu_state.open_menu = None;
         }
         MenuButtonKind::BackToHub => {
@@ -337,7 +336,11 @@ fn on_button_press(
     }
 }
 
-fn calculate_top_margin(window_size: Vec2) -> f32 {
+fn calculate_top_margin(window_size: Vec2, num_buttons: usize) -> f32 {
     // Add a small extra margin at the end so the written logo is revealed well.
-    0.5 * (window_size.y - MENU_HEIGHT) + 50.
+    0.5 * (window_size.y - menu_height(num_buttons)) + 50.
+}
+
+fn menu_height(num_buttons: usize) -> f32 {
+    num_buttons as f32 * (MENU_BUTTON_HEIGHT + MENU_BUTTON_GAP)
 }

@@ -143,6 +143,10 @@ pub struct BlocksPushes;
 #[derive(Component, Debug)]
 pub struct Deadly;
 
+/// An entity whose sprite index is determined by its direction.
+#[derive(Component, Debug)]
+pub struct DirectionalSprite;
+
 /// An entrance to another level.
 #[derive(Component, Debug)]
 pub struct Entrance(u16);

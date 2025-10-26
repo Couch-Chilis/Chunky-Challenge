@@ -126,7 +126,7 @@ fn on_update_background_transform(
     let Ok(player_position) = player_query.single() else {
         return Ok(());
     };
-    let focus_position = if menu_state.is_in_hub_menu() {
+    let focus_position = if menu_state.is_in_start_menu() {
         (INITIAL_HUB_FOCUS.0, INITIAL_HUB_FOCUS.1)
     } else {
         (player_position.x, player_position.y)
@@ -136,7 +136,7 @@ fn on_update_background_transform(
     let window = window_query.single()?;
 
     let window_size = window.size();
-    let zoom_factor = if menu_state.is_in_hub_menu() {
+    let zoom_factor = if menu_state.is_in_start_menu() {
         INITIAL_HUB_ZOOM_FACTOR
     } else if event == Some(&UpdateBackgroundTransform::LevelExit) {
         (window_size.x / GRID_SIZE as f32).max(window_size.y / GRID_SIZE as f32)

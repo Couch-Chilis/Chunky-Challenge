@@ -14,10 +14,20 @@ pub struct GameState {
     #[serde(skip)]
     pub previous_level: Option<u16>,
 
-    pub finished_levels: BTreeSet<u16>,
+    finished_levels: BTreeSet<u16>,
 }
 
 impl GameState {
+    pub fn mark_level_finished(&mut self, level: u16) {
+        self.finished_levels.insert(level);
+
+        self.save();
+    }
+
+    pub fn is_finished_level(&self, level: u16) -> bool {
+        self.finished_levels.contains(&level)
+    }
+
     /// Loads game state from disk, or returns `Self::default()` if no
     /// game state could be loaded.
     pub fn load() -> Self {
@@ -33,10 +43,10 @@ impl GameState {
     }
 
     pub fn set_current_level(&mut self, level: u16) {
-        self.previous_level = Some(self.current_level);
-        self.current_level = level;
-
-        self.save()
+        if level > 0 || self.current_level > 0 {
+            self.previous_level = Some(self.current_level);
+            self.current_level = level;
+        }
     }
 
     /// Saves game state to disk.

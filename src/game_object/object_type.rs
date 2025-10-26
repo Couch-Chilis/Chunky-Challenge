@@ -6,13 +6,14 @@ use bevy::prelude::*;
 use crate::{errors::UnknownObjectType, fonts::Fonts, levels::InitialPositionAndMetadata};
 
 use super::{
-    BluePaint, Button, Door, Entrance, Exit, Explosion, Flash, Gate, Grave, Ice, Key, Mine, Player,
-    PurpleBlock, PurplePaint, RedPaint, Splash, Teleporter, Transporter, YellowBlock,
+    BluePaint, Button, Direction, Door, Entrance, Exit, Explosion, Flash, Gate, Grave, Ice, Key,
+    Mine, Player, PurpleBlock, PurplePaint, RedPaint, Splash, Teleporter, Transporter, YellowBlock,
     assets::GameObjectAssets,
     object_bundles::{BlueBlock, BouncingBall, Creature1, Raft, RedBlock, Water},
 };
 
 #[derive(Clone, Component, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
+#[require(Direction)]
 pub enum ObjectType {
     BlueBlock,
     BluePaint,

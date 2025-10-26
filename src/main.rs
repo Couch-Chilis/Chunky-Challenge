@@ -42,6 +42,8 @@ use ui_state::UiState;
 use utils::get_level_path;
 use winit::window::Icon;
 
+use crate::game_object::DirectionalSprite;
+
 #[derive(Default, Resource)]
 struct ExitState {
     next_level_after_background_transform: Option<u16>,
@@ -291,7 +293,6 @@ pub fn on_mouse_input(
 fn on_keyboard_input(
     mut commands: Commands,
     mut game_events: MessageWriter<GameEvent>,
-    app_exit_events: MessageWriter<AppExit>,
     player_query: Query<Entity, With<Player>>,
     mut menu_state: ResMut<MenuState>,
     editor_state: ResMut<EditorState>,
@@ -304,7 +305,7 @@ fn on_keyboard_input(
         on_editor_keyboard_input(commands, editor_state, ui_state, keys);
         return;
     } else if menu_state.is_open() {
-        on_menu_keyboard_input(commands, app_exit_events, menu_state, keys);
+        on_menu_keyboard_input(commands, menu_state, keys);
         return;
     } else if exit_state.next_level_after_background_transform.is_some() {
         return;
@@ -375,7 +376,10 @@ fn position_entities(
     }
 }
 
-fn update_entity_directions(mut query: Query<(&Direction, &mut Sprite), Changed<Direction>>) {
+#[expect(clippy::type_complexity)]
+fn update_entity_directions(
+    mut query: Query<(&Direction, &mut Sprite), (Changed<Direction>, With<DirectionalSprite>)>,
+) {
     for (direction, mut sprite) in &mut query {
         if let Some(atlas) = sprite.texture_atlas.as_mut() {
             atlas.index = *direction as usize;
@@ -503,7 +507,7 @@ Position=2,1
 
     *dimensions = level.dimensions;
 
-    background_events.write(if menu_state.is_in_hub_menu() {
+    background_events.write(if menu_state.is_in_start_menu() {
         UpdateBackgroundTransform::Immediate
     } else {
         UpdateBackgroundTransform::LevelEntrance
@@ -541,7 +545,7 @@ fn save_level(
     objects_query: Query<(
         &ObjectType,
         &Position,
-        Option<&Direction>,
+        &Direction,
         Option<&Entrance>,
         Option<&Massive>,
         Option<&Openable>,
@@ -562,7 +566,7 @@ fn save_level(
             let positions = objects.entry(*object_type).or_insert(Vec::new());
             positions.push(InitialPositionAndMetadata {
                 position: *position,
-                direction: direction.map_or_else(Default::default, |direction| *direction),
+                direction: *direction,
                 identifier: teleporter.map(|teleporter| teleporter.0),
                 level: entrance
                     .map(Entrance::level)

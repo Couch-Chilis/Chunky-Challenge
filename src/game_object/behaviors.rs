@@ -93,7 +93,7 @@ pub fn check_for_exit(
         for exit_position in &exit_query {
             if player_position.as_ref() == exit_position {
                 let finished_level = game_state.current_level;
-                game_state.finished_levels.insert(finished_level);
+                game_state.mark_level_finished(finished_level);
                 exit_state.next_level_after_background_transform = Some(0);
                 background_events.write(UpdateBackgroundTransform::LevelExit);
                 return;
@@ -136,7 +136,7 @@ pub fn check_for_finished_levels(
     game_state: Res<GameState>,
 ) {
     for (entrance, mut sprite) in &mut entrance_query {
-        if game_state.finished_levels.contains(&entrance.level())
+        if game_state.is_finished_level(entrance.level())
             && let Some(atlas) = sprite.texture_atlas.as_mut()
         {
             atlas.index = 1;
@@ -144,23 +144,21 @@ pub fn check_for_finished_levels(
     }
     for (entity, openable, massive, mut sprite) in &mut openable_query {
         if let Openable::LevelFinished(level) = openable {
-            let opened = game_state.finished_levels.contains(level);
+            let opened = game_state.is_finished_level(*level);
             if opened {
-                if massive.is_some() {
+                if massive.is_some()
+                    && let Some(atlas) = sprite.texture_atlas.as_mut()
+                {
                     commands.entity(entity).remove::<Massive>();
-                }
 
-                if let Some(atlas) = sprite.texture_atlas.as_mut() {
                     atlas.index = 1;
                 }
-            } else {
-                if massive.is_none() {
-                    commands.entity(entity).insert(Massive);
-                }
+            } else if massive.is_none()
+                && let Some(atlas) = sprite.texture_atlas.as_mut()
+            {
+                commands.entity(entity).insert(Massive);
 
-                if let Some(atlas) = sprite.texture_atlas.as_mut() {
-                    atlas.index = 0;
-                }
+                atlas.index = 0;
             }
         }
     }
@@ -497,21 +495,19 @@ pub fn check_for_triggers(
 
     for (entity, massive, mut image_node) in openables {
         if opened {
-            if massive.is_some() {
+            if massive.is_some()
+                && let Some(atlas) = image_node.texture_atlas.as_mut()
+            {
                 commands.entity(entity).remove::<Massive>();
-            }
 
-            if let Some(atlas) = image_node.texture_atlas.as_mut() {
                 atlas.index = 1;
             }
-        } else {
-            if massive.is_none() {
-                commands.entity(entity).insert(Massive);
-            }
+        } else if massive.is_none()
+            && let Some(atlas) = image_node.texture_atlas.as_mut()
+        {
+            commands.entity(entity).insert(Massive);
 
-            if let Some(atlas) = image_node.texture_atlas.as_mut() {
-                atlas.index = 0;
-            }
+            atlas.index = 0;
         }
     }
 
