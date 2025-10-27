@@ -14,7 +14,12 @@ mod timers;
 mod ui_state;
 mod utils;
 
-use std::{borrow::Cow, collections::BTreeMap, fs};
+use std::{
+    borrow::Cow,
+    collections::BTreeMap,
+    fs,
+    ops::{Deref, DerefMut},
+};
 
 use background::{Background, BackgroundPlugin, UpdateBackgroundTransform};
 use bevy::{
@@ -42,7 +47,7 @@ use ui_state::UiState;
 use utils::get_level_path;
 use winit::window::Icon;
 
-use crate::game_object::DirectionalSprite;
+use crate::{game_object::DirectionalSprite, timers::PlayerMovementTimer};
 
 #[derive(Default, Resource)]
 struct ExitState {
@@ -52,6 +57,40 @@ struct ExitState {
 #[derive(Default, Resource)]
 struct PressedTriggers {
     num_pressed_triggers: usize,
+}
+
+#[derive(Default, Resource)]
+struct PreviousDirection(Option<Direction>);
+
+impl Deref for PreviousDirection {
+    type Target = Option<Direction>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl DerefMut for PreviousDirection {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
+#[derive(Default, Resource)]
+struct QueuedDirection(Option<Direction>);
+
+impl Deref for QueuedDirection {
+    type Target = Option<Direction>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl DerefMut for QueuedDirection {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
 }
 
 #[derive(Event)]
@@ -116,7 +155,10 @@ fn main() {
         .init_resource::<GameObjectAssets>()
         .init_resource::<Levels>()
         .init_resource::<MovementTimer>()
+        .init_resource::<PlayerMovementTimer>()
         .init_resource::<PressedTriggers>()
+        .init_resource::<PreviousDirection>()
+        .init_resource::<QueuedDirection>()
         .init_resource::<TemporaryTimer>()
         .init_resource::<TransporterTimer>()
         .init_resource::<UiState>()
@@ -130,7 +172,15 @@ fn main() {
         .add_observer(spawn_object)
         .add_systems(Startup, setup)
         .add_systems(PostStartup, (set_window_icon, post_setup))
-        .add_systems(Update, (on_keyboard_input, on_mouse_input, on_resize))
+        .add_systems(
+            Update,
+            (
+                on_keyboard_input,
+                on_player_movement,
+                on_mouse_input,
+                on_resize,
+            ),
+        )
         .add_systems(
             Update,
             (
@@ -292,7 +342,6 @@ pub fn on_mouse_input(
 #[expect(clippy::too_many_arguments)]
 fn on_keyboard_input(
     mut commands: Commands,
-    mut game_events: MessageWriter<GameEvent>,
     player_query: Query<Entity, With<Player>>,
     mut menu_state: ResMut<MenuState>,
     editor_state: ResMut<EditorState>,
@@ -314,18 +363,6 @@ fn on_keyboard_input(
     for key in keys.get_just_pressed() {
         use KeyCode::*;
         match key {
-            ArrowUp => {
-                game_events.write(GameEvent::MovePlayer(Direction::Up));
-            }
-            ArrowRight => {
-                game_events.write(GameEvent::MovePlayer(Direction::Right));
-            }
-            ArrowDown => {
-                game_events.write(GameEvent::MovePlayer(Direction::Down));
-            }
-            ArrowLeft => {
-                game_events.write(GameEvent::MovePlayer(Direction::Left));
-            }
             Enter if player_query.single().is_err() => {
                 commands.trigger(LoadRelativeLevel(0));
             }
@@ -360,6 +397,89 @@ fn on_keyboard_input(
     }
 }
 
+#[expect(clippy::too_many_arguments)]
+fn on_player_movement(
+    mut queued_direction: ResMut<QueuedDirection>,
+    mut timer: ResMut<PlayerMovementTimer>,
+    mut game_events: MessageWriter<GameEvent>,
+    menu_state: Res<MenuState>,
+    editor_state: Res<EditorState>,
+    exit_state: Res<ExitState>,
+    keys: Res<ButtonInput<KeyCode>>,
+    previous_direction: Res<PreviousDirection>,
+    time: Res<Time>,
+) {
+    if editor_state.is_open
+        || menu_state.is_open()
+        || exit_state.next_level_after_background_transform.is_some()
+    {
+        return;
+    }
+
+    timer.tick(time.delta());
+
+    if timer.just_finished() {
+        timer.reset();
+
+        if let Some(direction) = queued_direction.take() {
+            game_events.write(GameEvent::MovePlayer(direction));
+        } else if let (Some(first), second) =
+            directions_from_keys(keys.get_pressed(), **previous_direction)
+        {
+            game_events.write(GameEvent::MovePlayer(first));
+
+            if let Some(direction) = second {
+                *queued_direction = QueuedDirection(Some(direction));
+            }
+        } else {
+            timer.pause();
+        }
+    } else if timer.is_paused() {
+        if let (Some(first), second) =
+            directions_from_keys(keys.get_just_pressed(), **previous_direction)
+        {
+            game_events.write(GameEvent::MovePlayer(first));
+
+            if let Some(direction) = second {
+                *queued_direction = QueuedDirection(Some(direction));
+            }
+
+            timer.unpause();
+        }
+    } else if let (Some(direction), _) =
+        directions_from_keys(keys.get_just_pressed(), **previous_direction)
+    {
+        *queued_direction = QueuedDirection(Some(direction));
+    }
+}
+
+fn directions_from_keys<'a>(
+    keys: impl ExactSizeIterator<Item = &'a KeyCode>,
+    previous_direction: Option<Direction>,
+) -> (Option<Direction>, Option<Direction>) {
+    let mut dx = 0;
+    let mut dy = 0;
+    for key in keys {
+        match key {
+            KeyCode::ArrowUp => dy -= 1,
+            KeyCode::ArrowRight => dx += 1,
+            KeyCode::ArrowDown => dy += 1,
+            KeyCode::ArrowLeft => dx -= 1,
+            _ => {}
+        }
+    }
+
+    let x_dir = Direction::try_from((dx, 0)).ok();
+    let y_dir = Direction::try_from((0, dy)).ok();
+    if x_dir.is_some()
+        && (y_dir.is_none() || previous_direction.is_some_and(|prev| prev.as_delta().0 == 0))
+    {
+        (x_dir, y_dir)
+    } else {
+        (y_dir, x_dir)
+    }
+}
+
 fn position_entities(
     mut query: Query<(Ref<Position>, &mut Transform)>,
     dimensions: Res<Dimensions>,
@@ -388,15 +508,18 @@ fn update_entity_directions(
 }
 
 fn on_game_event(
-    mut level_events: MessageReader<GameEvent>,
+    mut game_events: MessageReader<GameEvent>,
     mut collision_objects_query: Query<CollisionObjectQuery, Without<Player>>,
     mut player_query: Query<(&mut Position, &mut Direction, Option<&Weight>), With<Player>>,
+    mut previous_direction: ResMut<PreviousDirection>,
     mut ui_state: ResMut<UiState>,
     dimensions: Res<Dimensions>,
 ) {
-    for event in level_events.read() {
+    for event in game_events.read() {
         match event {
             GameEvent::MovePlayer(direction) => {
+                *previous_direction = PreviousDirection(Some(*direction));
+
                 if let Ok((mut position, mut player_direction, weight)) = player_query.single_mut()
                 {
                     ui_state.camera_offset = Default::default();
@@ -453,6 +576,7 @@ fn load_level(
     mut dimensions: ResMut<Dimensions>,
     mut game_state: ResMut<GameState>,
     mut pressed_triggers: ResMut<PressedTriggers>,
+    mut timer: ResMut<PlayerMovementTimer>,
     assets: Res<GameObjectAssets>,
     fonts: Res<Fonts>,
     levels: Res<Levels>,
@@ -504,9 +628,12 @@ Position=2,1
         spawn_level_objects(spawner, level.objects, &assets, &fonts);
     });
 
+    *dimensions = level.dimensions;
+
     pressed_triggers.num_pressed_triggers = 0;
 
-    *dimensions = level.dimensions;
+    timer.reset();
+    timer.pause();
 
     background_events.write(if menu_state.is_in_start_menu() {
         UpdateBackgroundTransform::Immediate
