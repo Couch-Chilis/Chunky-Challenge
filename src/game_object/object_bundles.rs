@@ -364,7 +364,7 @@ impl Key {
             initial_position.position,
             Pushable,
             Sprite::from_image(assets.key.clone()),
-            Transform::from_translation(Vec3::new(0., 0., 2.)),
+            Transform::from_translation(Vec3::new(0., 0., 3.)),
             Weight::Light,
         )
     }
