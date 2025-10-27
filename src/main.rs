@@ -193,17 +193,19 @@ fn main() {
                 check_for_game_over,
                 check_for_slippery_and_transporter,
                 despawn_volatile_objects,
-                move_objects,
                 on_game_event,
             )
                 .after(on_keyboard_input),
         )
         .add_systems(
             Update,
+            check_for_movable.after(check_for_slippery_and_transporter),
+        )
+        .add_systems(
+            Update,
             (check_for_transform_on_push, check_for_triggers)
                 .after(check_for_liquid)
-                .after(on_keyboard_input)
-                .after(move_objects),
+                .after(check_for_movable),
         )
         .add_systems(
             Update,
@@ -214,7 +216,7 @@ fn main() {
                 check_for_teleporter,
                 on_player_moved,
             )
-                .after(move_objects)
+                .after(check_for_movable)
                 .after(on_mouse_input),
         )
         .add_systems(

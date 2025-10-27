@@ -531,7 +531,7 @@ pub fn despawn_volatile_objects(
 }
 
 #[expect(clippy::type_complexity)]
-pub fn move_objects(
+pub fn check_for_movable(
     mut movable_query: Query<(
         &mut Direction,
         &Movable,
