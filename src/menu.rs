@@ -243,6 +243,35 @@ impl MenuButton {
     }
 }
 
+pub fn on_menu_gamepad_input(
+    mut commands: Commands,
+    mut menu_state: ResMut<MenuState>,
+    gamepads: Query<&Gamepad>,
+) {
+    let Some(menu_kind) = menu_state.open_menu else {
+        return;
+    };
+
+    for gamepad in gamepads {
+        for button in gamepad.get_just_pressed() {
+            use GamepadButton::*;
+            match button {
+                DPadUp => menu_state.move_selected_button(menu_kind, -1),
+                DPadDown => menu_state.move_selected_button(menu_kind, 1),
+                South => {
+                    commands.trigger(ButtonPress);
+                    return;
+                }
+                East => {
+                    menu_state.open_menu = None;
+                }
+
+                _ => continue,
+            };
+        }
+    }
+}
+
 pub fn on_menu_keyboard_input(
     mut commands: Commands,
     mut menu_state: ResMut<MenuState>,

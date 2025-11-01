@@ -47,7 +47,9 @@ use ui_state::UiState;
 use utils::get_level_path;
 use winit::window::Icon;
 
-use crate::{game_object::DirectionalSprite, timers::PlayerMovementTimer};
+use crate::{
+    game_object::DirectionalSprite, menu::on_menu_gamepad_input, timers::PlayerMovementTimer,
+};
 
 #[derive(Default, Resource)]
 struct ExitState {
@@ -177,6 +179,7 @@ fn main() {
             Update,
             (
                 on_keyboard_input,
+                on_gamepad_input,
                 on_player_movement,
                 on_mouse_input,
                 on_resize,
@@ -196,7 +199,8 @@ fn main() {
                 despawn_volatile_objects,
                 on_game_event,
             )
-                .after(on_keyboard_input),
+                .after(on_keyboard_input)
+                .after(on_gamepad_input),
         )
         .add_systems(
             Update,
@@ -342,6 +346,54 @@ pub fn on_mouse_input(
     Ok(())
 }
 
+fn on_gamepad_input(
+    mut commands: Commands,
+    player_query: Query<Entity, With<Player>>,
+    mut menu_state: ResMut<MenuState>,
+    editor_state: ResMut<EditorState>,
+    exit_state: Res<ExitState>,
+    game_state: Res<GameState>,
+    gamepads: Query<&Gamepad>,
+) {
+    if editor_state.is_open {
+        return;
+    } else if menu_state.is_open() {
+        on_menu_gamepad_input(commands, menu_state, gamepads);
+        return;
+    } else if exit_state.next_level_after_background_transform.is_some() {
+        return;
+    }
+
+    for gamepad in gamepads {
+        for button in gamepad.get_just_pressed() {
+            use GamepadButton::*;
+            match button {
+                South if player_query.single().is_err() => {
+                    commands.trigger(LoadRelativeLevel(0));
+                }
+                RightTrigger2 => {
+                    commands.trigger(ChangeZoom(1.25));
+                }
+                LeftTrigger2 => {
+                    commands.trigger(ChangeZoom(0.8));
+                }
+                North => {
+                    commands.trigger(LoadRelativeLevel(0));
+                }
+                East => {
+                    menu_state.set_open(if game_state.is_in_hub() {
+                        MenuKind::Hub
+                    } else {
+                        MenuKind::Level
+                    });
+                }
+
+                _ => continue,
+            };
+        }
+    }
+}
+
 #[expect(clippy::too_many_arguments)]
 fn on_keyboard_input(
     mut commands: Commands,
@@ -409,6 +461,7 @@ fn on_player_movement(
     editor_state: Res<EditorState>,
     exit_state: Res<ExitState>,
     keys: Res<ButtonInput<KeyCode>>,
+    gamepads: Query<&Gamepad>,
     previous_direction: Res<PreviousDirection>,
     time: Res<Time>,
 ) {
@@ -427,7 +480,7 @@ fn on_player_movement(
         if let Some(direction) = queued_direction.take() {
             game_events.write(GameEvent::MovePlayer(direction));
         } else if let (Some(first), second) =
-            directions_from_keys(keys.get_pressed(), **previous_direction)
+            directions_from_inputs(gamepads, &keys, **previous_direction, false)
         {
             game_events.write(GameEvent::MovePlayer(first));
 
@@ -439,7 +492,7 @@ fn on_player_movement(
         }
     } else if timer.is_paused() {
         if let (Some(first), second) =
-            directions_from_keys(keys.get_just_pressed(), **previous_direction)
+            directions_from_inputs(gamepads, &keys, **previous_direction, true)
         {
             game_events.write(GameEvent::MovePlayer(first));
 
@@ -450,28 +503,46 @@ fn on_player_movement(
             timer.unpause();
         }
     } else if let (Some(direction), _) =
-        directions_from_keys(keys.get_just_pressed(), **previous_direction)
+        directions_from_inputs(gamepads, &keys, **previous_direction, true)
     {
         *queued_direction = QueuedDirection(Some(direction));
     }
 }
 
-fn directions_from_keys<'a>(
-    keys: impl ExactSizeIterator<Item = &'a KeyCode>,
+fn directions_from_gamepad(
+    gamepad: &Gamepad,
     previous_direction: Option<Direction>,
+    just_pressed: bool,
 ) -> (Option<Direction>, Option<Direction>) {
+    let pressed = if just_pressed {
+        Gamepad::just_pressed
+    } else {
+        Gamepad::pressed
+    };
+
     let mut dx = 0;
     let mut dy = 0;
-    for key in keys {
-        match key {
-            KeyCode::ArrowUp => dy -= 1,
-            KeyCode::ArrowRight => dx += 1,
-            KeyCode::ArrowDown => dy += 1,
-            KeyCode::ArrowLeft => dx -= 1,
-            _ => {}
-        }
+    if pressed(gamepad, GamepadButton::DPadUp) {
+        dy -= 1;
+    }
+    if pressed(gamepad, GamepadButton::DPadRight) {
+        dx += 1
+    }
+    if pressed(gamepad, GamepadButton::DPadDown) {
+        dy += 1;
+    }
+    if pressed(gamepad, GamepadButton::DPadLeft) {
+        dx -= 1
     }
 
+    directions_from_deltas(dx, dy, previous_direction)
+}
+
+fn directions_from_deltas(
+    dx: i16,
+    dy: i16,
+    previous_direction: Option<Direction>,
+) -> (Option<Direction>, Option<Direction>) {
     let x_dir = Direction::try_from((dx, 0)).ok();
     let y_dir = Direction::try_from((0, dy)).ok();
     if x_dir.is_some()
@@ -481,6 +552,56 @@ fn directions_from_keys<'a>(
     } else {
         (y_dir, x_dir)
     }
+}
+
+fn directions_from_inputs(
+    gamepads: Query<&Gamepad>,
+    keys: &ButtonInput<KeyCode>,
+    previous_direction: Option<Direction>,
+    just_pressed: bool,
+) -> (Option<Direction>, Option<Direction>) {
+    let directions = directions_from_keys(keys, previous_direction, just_pressed);
+    if directions.0.is_some() {
+        return directions;
+    }
+
+    for gamepad in gamepads {
+        let directions = directions_from_gamepad(gamepad, previous_direction, just_pressed);
+        if directions.0.is_some() {
+            return directions;
+        }
+    }
+
+    (None, None)
+}
+
+fn directions_from_keys(
+    keys: &ButtonInput<KeyCode>,
+    previous_direction: Option<Direction>,
+    just_pressed: bool,
+) -> (Option<Direction>, Option<Direction>) {
+    let pressed = if just_pressed {
+        ButtonInput::just_pressed
+    } else {
+        ButtonInput::pressed
+    };
+
+    let mut dx = 0;
+    let mut dy = 0;
+    if pressed(keys, KeyCode::ArrowUp) {
+        dy -= 1;
+    }
+    if pressed(keys, KeyCode::ArrowRight) {
+        dx += 1
+    }
+    if pressed(keys, KeyCode::ArrowDown) {
+        dy += 1;
+    }
+    if pressed(keys, KeyCode::ArrowLeft) {
+        dx -= 1
+    }
+
+    directions_from_deltas(dx, dy, previous_direction)
 }
 
 fn position_entities(
