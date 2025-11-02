@@ -191,6 +191,8 @@ pub struct Key;
 /// Liquid entities will cause other entities to sink when it comes into
 /// contact with them. An exception are [Floatable] entities.
 ///
+/// The effect of liquids can be neutralised by a [NeutralisesLiquid] entity.
+///
 /// Should not be combined with [Deadly]. Dying is implied if the player
 /// sinks.
 #[derive(Component, Debug)]
@@ -217,6 +219,11 @@ pub enum Movable {
     /// have on their right.
     FollowRightHand,
 }
+
+/// Prevents the effects of a [Liquid] entity if it comes into contact with
+/// them.
+#[derive(Component, Debug)]
+pub struct NeutralisesLiquid;
 
 /// A [Massive] entity that can be opened externally.
 #[derive(Component, Debug)]

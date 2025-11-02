@@ -196,23 +196,20 @@ pub fn check_for_liquid(
         (Entity, &Position, Option<&Floatable>),
         (Changed<Position>, Without<Liquid>),
     >,
-    floatable_objects_query: Query<(Entity, &Position), With<Floatable>>,
+    neutralised_query: Query<(Entity, &Position), With<NeutralisesLiquid>>,
     mut temporary_timer: ResMut<TemporaryTimer>,
 ) {
     for (object, position, floatable) in &moved_objects_query {
         for liquid_position in &liquid_query {
             if liquid_position == position {
                 if floatable.is_some() {
-                    if !floatable_objects_query
-                        .iter()
-                        .any(|(other, other_position)| {
-                            other != object && other_position == position
-                        })
-                    {
+                    if !neutralised_query.iter().any(|(other, other_position)| {
+                        other != object && other_position == position
+                    }) {
                         let mut object = commands.entity(object);
                         object.remove::<Pushable>();
                     }
-                } else if !floatable_objects_query
+                } else if !neutralised_query
                     .iter()
                     .any(|(_, other_position)| other_position == position)
                 {

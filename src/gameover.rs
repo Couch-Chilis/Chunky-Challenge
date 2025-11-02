@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::{constants::*, editor::EditorState, fonts::Fonts, Player};
+use crate::{Player, constants::*, editor::EditorState, fonts::Fonts};
 
 #[derive(Component)]
 pub struct GameOver;
@@ -24,7 +24,7 @@ pub fn setup_gameover(commands: &mut Commands, fonts: &Fonts) {
         ))
         .with_children(|cb| {
             cb.spawn((
-                Text::new("Game Over\n\nPress Enter to try again"),
+                Text::new("Game Over"),
                 TextColor(WHITE),
                 TextFont::from(fonts.poppins_light.clone()).with_font_size(20.),
                 TextLayout::new_with_justify(Justify::Center),

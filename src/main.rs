@@ -148,11 +148,13 @@ fn main() {
                 ..default()
             }),
             BackgroundPlugin,
+            #[cfg(debug_assertions)]
             EditorPlugin,
             MenuPlugin,
         ))
         .init_resource::<AnimationTimer>()
         .init_resource::<Dimensions>()
+        .init_resource::<EditorState>()
         .init_resource::<ExitState>()
         .init_resource::<Fonts>()
         .init_resource::<GameObjectAssets>()
@@ -380,7 +382,7 @@ fn on_gamepad_input(
                 North => {
                     commands.trigger(LoadRelativeLevel(0));
                 }
-                East => {
+                Start => {
                     menu_state.set_open(if game_state.is_in_hub() {
                         MenuKind::Hub
                     } else {

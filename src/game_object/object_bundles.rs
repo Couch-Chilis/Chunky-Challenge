@@ -1,7 +1,9 @@
 use bevy::prelude::*;
 
 use crate::{
-    constants::ENTRANCE_TEXT, fonts::Fonts, game_object::DirectionalSprite,
+    constants::ENTRANCE_TEXT,
+    fonts::Fonts,
+    game_object::{DirectionalSprite, NeutralisesLiquid},
     levels::InitialPositionAndMetadata,
 };
 
@@ -237,6 +239,7 @@ impl Explosion {
         initial_position: InitialPositionAndMetadata,
     ) -> impl Bundle {
         (
+            Deadly,
             initial_position.direction,
             initial_position.position,
             Sprite::from_image(assets.explosion.clone()),
@@ -459,6 +462,7 @@ impl Raft {
             ObjectType::Raft,
             initial_position.direction,
             Floatable,
+            NeutralisesLiquid,
             initial_position.position,
             Pushable,
             Sprite::from_image(assets.raft.clone()),

@@ -27,7 +27,6 @@ impl Plugin for EditorPlugin {
                 on_selected_object_change,
             ),
         )
-        .init_resource::<EditorState>()
         .add_observer(change_height)
         .add_observer(change_identifier)
         .add_observer(change_level)

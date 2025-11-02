@@ -21,7 +21,6 @@ bevy = { version = "0.17", default-features = false, features = [
     "bevy_ui_render",
     "bevy_window",
     "bevy_winit",
-    "dynamic_linking",
     "jpeg",
     "png",
     "wayland",

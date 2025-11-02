@@ -98,6 +98,7 @@ impl MenuButtonKind {
     fn buttons_for_menu(menu_kind: MenuKind) -> &'static [Self] {
         static START_BUTTONS: &[MenuButtonKind] = &[
             MenuButtonKind::Start,
+            #[cfg(debug_assertions)]
             MenuButtonKind::Editor,
             MenuButtonKind::OtherGames,
             MenuButtonKind::Quit,
@@ -106,6 +107,7 @@ impl MenuButtonKind {
         static HUB_BUTTONS: &[MenuButtonKind] = &[
             MenuButtonKind::Continue,
             MenuButtonKind::Restart,
+            #[cfg(debug_assertions)]
             MenuButtonKind::Editor,
             MenuButtonKind::OtherGames,
             MenuButtonKind::Quit,
@@ -115,6 +117,7 @@ impl MenuButtonKind {
             MenuButtonKind::Continue,
             MenuButtonKind::RestartLevel,
             MenuButtonKind::BackToHub,
+            #[cfg(debug_assertions)]
             MenuButtonKind::Editor,
             MenuButtonKind::Quit,
         ];
@@ -262,7 +265,7 @@ pub fn on_menu_gamepad_input(
                     commands.trigger(ButtonPress);
                     return;
                 }
-                East => {
+                Start | East => {
                     menu_state.open_menu = None;
                 }
 
