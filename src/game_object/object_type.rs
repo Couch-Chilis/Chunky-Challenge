@@ -3,7 +3,7 @@ use std::str::FromStr;
 
 use bevy::prelude::*;
 
-use crate::{errors::UnknownObjectType, fonts::Fonts, levels::InitialPositionAndMetadata};
+use crate::{errors::UnknownObjectType, levels::InitialPositionAndMetadata, ui::Fonts};
 
 use super::{
     BluePaint, Button, Direction, Door, Entrance, Exit, Explosion, Flash, Gate, Grave, Ice, Key,

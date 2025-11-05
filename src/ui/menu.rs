@@ -2,8 +2,10 @@ use bevy::prelude::*;
 
 use crate::{
     LoadLevel, LoadRelativeLevel, background::UpdateBackgroundTransform, constants::*,
-    editor::ToggleEditor, fonts::Fonts, setup,
+    editor::ToggleEditor,
 };
+
+use super::{Fonts, setup_ui};
 
 pub const MENU_WIDTH: f32 = 500.;
 pub const MENU_BUTTON_GAP: f32 = 40.;
@@ -74,7 +76,7 @@ pub struct MenuPlugin;
 
 impl Plugin for MenuPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, setup_menus.after(setup))
+        app.add_systems(Startup, setup_menus.after(setup_ui))
             .init_resource::<MenuState>()
             .add_observer(on_button_press)
             .add_systems(Update, (on_menu_interaction_input, on_resize))

@@ -1,1 +1,10 @@
-/target
+app/build
+build
+local.properties
+target
+.DS_Store
+.gradle
+.idea
+**/*.a
+**/.cxx
+**/jniLibs

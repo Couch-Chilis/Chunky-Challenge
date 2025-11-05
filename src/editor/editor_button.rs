@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 use crate::{
     constants::{DARK_GRAY, *},
-    fonts::Fonts,
+    ui::Fonts,
 };
 
 #[derive(Clone, Component, Copy, Eq, PartialEq)]

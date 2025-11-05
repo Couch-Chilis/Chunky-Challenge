@@ -4,11 +4,10 @@ use crate::{
     Background, ChangeZoom, LoadRelativeLevel, ResetLevel, SaveLevel, SpawnObject,
     background::UpdateBackgroundTransform,
     constants::*,
-    fonts::Fonts,
     game_object::{Entrance, GameObjectAssets, ObjectType, Position, Teleporter},
     levels::{Dimensions, InitialPositionAndMetadata},
     timers::{MovementTimer, TemporaryTimer, TransporterTimer},
-    ui_state::UiState,
+    ui::{Fonts, UiState},
     utils::level_coords_from_pointer_coords,
 };
 
@@ -292,7 +291,7 @@ pub fn on_editor_keyboard_input(
                 if matches!(editor_state.selection, SelectionState::Active { .. }) {
                     commands.trigger(MoveAllObjects { dx: 0, dy: -1 });
                 } else {
-                    ui_state.camera_offset.1 -= 1.;
+                    ui_state.camera_offset.y -= 1.;
                     commands.write_message(UpdateBackgroundTransform::Fast);
                 }
             }
@@ -300,7 +299,7 @@ pub fn on_editor_keyboard_input(
                 if matches!(editor_state.selection, SelectionState::Active { .. }) {
                     commands.trigger(MoveAllObjects { dx: 1, dy: 0 });
                 } else {
-                    ui_state.camera_offset.0 += 1.;
+                    ui_state.camera_offset.x += 1.;
                     commands.write_message(UpdateBackgroundTransform::Fast);
                 }
             }
@@ -308,7 +307,7 @@ pub fn on_editor_keyboard_input(
                 if matches!(editor_state.selection, SelectionState::Active { .. }) {
                     commands.trigger(MoveAllObjects { dx: 0, dy: 1 });
                 } else {
-                    ui_state.camera_offset.1 += 1.;
+                    ui_state.camera_offset.y += 1.;
                     commands.write_message(UpdateBackgroundTransform::Fast);
                 }
             }
@@ -316,7 +315,7 @@ pub fn on_editor_keyboard_input(
                 if matches!(editor_state.selection, SelectionState::Active { .. }) {
                     commands.trigger(MoveAllObjects { dx: -1, dy: 0 });
                 } else {
-                    ui_state.camera_offset.0 -= 1.;
+                    ui_state.camera_offset.x -= 1.;
                     commands.write_message(UpdateBackgroundTransform::Fast);
                 }
             }

@@ -4,7 +4,7 @@ use bevy::prelude::*;
 
 use crate::{
     ExitState, LoadLevel, Player, Position, constants::*, editor::EditorState, levels::*,
-    load_level, menu::MenuState, on_player_moved, on_resize, ui_state::UiState,
+    load_level, on_player_moved, on_resize, ui::UiState, ui::menu::MenuState,
     utils::load_repeating_asset,
 };
 
@@ -246,7 +246,7 @@ fn calculate_background_transform_with_zoom_factor(
         let max = 0.5 * (level_width - (window_size.x - editor_width));
         (zoom_factor * ((-focus_x as f32 + 0.5 * dimensions.width as f32) + 0.5) * GRID_SIZE as f32)
             .clamp(-max, max)
-            - (zoom_factor * ui_state.camera_offset.0 * GRID_SIZE as f32)
+            - (zoom_factor * ui_state.camera_offset.x * GRID_SIZE as f32)
     } else {
         0.
     };
@@ -255,7 +255,7 @@ fn calculate_background_transform_with_zoom_factor(
         let max = 0.5 * (level_height - window_size.y);
         (zoom_factor * ((focus_y as f32 - 0.5 * dimensions.height as f32) - 0.5) * GRID_SIZE as f32)
             .clamp(-max, max)
-            + (zoom_factor * ui_state.camera_offset.1 * GRID_SIZE as f32)
+            + (zoom_factor * ui_state.camera_offset.y * GRID_SIZE as f32)
     } else {
         0.
     };

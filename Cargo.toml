@@ -1,11 +1,25 @@
 [package]
-name = "ChunkyChallenge"
+name = "chunky-challenge"
 version = "0.1.0"
 edition = "2024"
+
+[lib]
+name = "chunky_challenge"
+path = "src/lib.rs"
+crate-type = [
+    "staticlib",
+    "cdylib",    # needed for Android
+    "rlib",      # rlib needed for running locally
+]
+
+[[bin]]
+name = "chunky_challenge"
+path = "src/main.rs"
 
 [dependencies]
 anyhow = "1"
 bevy = { version = "0.17", default-features = false, features = [
+    "android_shared_stdcxx",
     "animation",
     "bevy_asset",
     "bevy_core_pipeline",
@@ -35,6 +49,12 @@ winit = "0.30"
 [build-dependencies]
 embed-resource = "1.6.3"
 
+[target.'cfg(target_os = "android")'.dependencies]
+android-activity = { version = "0.6", features = ["game-activity"] }
+
+[patch.crates-io]
+android-activity = { git = "https://github.com/damus-io/android-activity", rev = "a8948332c7c551303d32eb26a59d0abd676e47a5" }
+
 [profile.dev]
 opt-level = 1
 
@@ -44,6 +64,7 @@ opt-level = 3
 [profile.release]
 codegen-units = 1
 opt-level = "s"
+panic = "abort"
 lto = "thin"
 
 [profile.wasm-release]

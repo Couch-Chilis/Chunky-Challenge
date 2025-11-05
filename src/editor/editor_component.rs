@@ -1,8 +1,8 @@
 use bevy::prelude::*;
 
-use crate::{constants::*, fonts::Fonts, game_object::GameObjectAssets, levels::Dimensions};
+use crate::{constants::*, game_object::GameObjectAssets, levels::Dimensions, ui::Fonts};
 
-use super::{editor_button::EditorButton, number_input::NumberInput, ObjectSelector};
+use super::{ObjectSelector, editor_button::EditorButton, number_input::NumberInput};
 
 const BORDER_WIDTH: f32 = 2.;
 

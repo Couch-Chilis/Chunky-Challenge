@@ -2,9 +2,9 @@ use bevy::prelude::*;
 
 use crate::{
     constants::ENTRANCE_TEXT,
-    fonts::Fonts,
     game_object::{DirectionalSprite, NeutralisesLiquid},
     levels::InitialPositionAndMetadata,
+    ui::Fonts,
 };
 
 use super::{

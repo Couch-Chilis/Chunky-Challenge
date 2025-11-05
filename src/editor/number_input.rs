@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::{constants::*, fonts::Fonts};
+use crate::{constants::*, ui::Fonts};
 
 #[derive(Component, Eq, PartialEq)]
 #[require(Node)]

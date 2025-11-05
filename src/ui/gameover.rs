@@ -1,11 +1,13 @@
 use bevy::prelude::*;
 
-use crate::{Player, constants::*, editor::EditorState, fonts::Fonts};
+use crate::{Player, constants::*, editor::EditorState};
+
+use super::Fonts;
 
 #[derive(Component)]
 pub struct GameOver;
 
-pub fn setup_gameover(commands: &mut Commands, fonts: &Fonts) {
+pub fn setup_gameover(mut commands: Commands, fonts: Res<Fonts>) {
     commands
         .spawn((
             GameOver,
