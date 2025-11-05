@@ -2,21 +2,46 @@ use bevy::prelude::*;
 
 use crate::{
     game_object::{Direction, Player},
-    ui::UiAssets,
+    game_state::GameState,
+    ui::{UiAssets, menu::MenuKind},
 };
 
 use super::menu::MenuState;
 
 #[derive(Component)]
-pub struct ControlsOverlay;
-
-#[derive(Component)]
 pub struct ControlArrow;
 
-pub fn setup_controls_overlay(mut commands: Commands, assets: Res<UiAssets>) {
+#[derive(Component)]
+pub struct MenuButton;
+
+#[derive(Component)]
+pub struct Overlay;
+
+pub fn setup_overlays(mut commands: Commands, assets: Res<UiAssets>) {
     commands
         .spawn((
-            ControlsOverlay,
+            Overlay,
+            GlobalZIndex(100),
+            Node {
+                display: Display::Flex,
+                width: Val::Vw(25.),
+                height: Val::Vw(25.),
+                position_type: PositionType::Absolute,
+                ..default()
+            },
+        ))
+        .with_child((
+            MenuButton,
+            Interaction::None,
+            ImageNode {
+                image: assets.menu.clone(),
+                ..Default::default()
+            },
+        ));
+
+    commands
+        .spawn((
+            Overlay,
             GlobalZIndex(100),
             Node {
                 display: Display::Flex,
@@ -99,20 +124,43 @@ pub fn setup_controls_overlay(mut commands: Commands, assets: Res<UiAssets>) {
         });
 }
 
-pub fn check_for_controls_visibility(
-    mut overlay_query: Query<&mut Node, With<ControlsOverlay>>,
+pub fn is_in_overlay(position: Vec2, window: &Window) -> bool {
+    let quarter_width = 0.25 * window.width();
+
+    let is_in_controls_overlay = position.y >= window.height() - quarter_width;
+    let is_in_menu_overlay = position.y <= quarter_width && position.x <= quarter_width;
+
+    is_in_controls_overlay || is_in_menu_overlay
+}
+
+pub fn check_for_menu_button_interaction(
+    mut menu_state: ResMut<MenuState>,
+    game_state: Res<GameState>,
+    menu_button_query: Query<&Interaction, With<MenuButton>>,
+) {
+    for interaction in menu_button_query {
+        if *interaction == Interaction::Pressed {
+            menu_state.set_open(if game_state.is_in_hub() {
+                MenuKind::Hub
+            } else {
+                MenuKind::Level
+            });
+        }
+    }
+}
+
+pub fn check_for_overlay_visibility(
+    mut overlay_query: Query<&mut Node, With<Overlay>>,
     player_query: Query<Entity, With<Player>>,
     menu_state: Res<MenuState>,
-) -> Result<()> {
-    let mut overlay_style = overlay_query.single_mut()?;
-
-    if player_query.single().is_ok() && !menu_state.is_open() {
-        if overlay_style.display != Display::Flex {
-            overlay_style.display = Display::Flex;
+) {
+    for mut overlay_style in &mut overlay_query {
+        if player_query.single().is_ok() && !menu_state.is_open() {
+            if overlay_style.display != Display::Flex {
+                overlay_style.display = Display::Flex;
+            }
+        } else if overlay_style.display != Display::None {
+            overlay_style.display = Display::None;
         }
-    } else if overlay_style.display != Display::None {
-        overlay_style.display = Display::None;
     }
-
-    Ok(())
 }

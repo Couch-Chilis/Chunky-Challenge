@@ -1,10 +1,10 @@
 #[cfg(any(target_os = "android", target_os = "ios"))]
-#[path = "ui/controls_overlay.mobile.rs"]
-mod controls_overlay;
+#[path = "ui/overlays.mobile.rs"]
+mod overlays;
 
 #[cfg(not(any(target_os = "android", target_os = "ios")))]
-#[path = "ui/controls_overlay.desktop.rs"]
-mod controls_overlay;
+#[path = "ui/overlays.desktop.rs"]
+mod overlays;
 
 mod fonts;
 mod gameover;
@@ -13,9 +13,9 @@ mod ui_state;
 
 pub mod menu;
 
-pub use controls_overlay::*;
 pub use fonts::*;
 pub use gameover::*;
+pub use overlays::*;
 pub use ui_assets::*;
 pub use ui_state::*;
 
@@ -32,7 +32,8 @@ impl Plugin for UiPlugin {
             .init_resource::<UiState>()
             .add_plugins(MenuPlugin)
             .add_systems(Startup, setup_ui)
-            .add_systems(PostStartup, (setup_controls_overlay, setup_gameover));
+            .add_systems(PostStartup, (setup_overlays, setup_gameover))
+            .add_systems(Update, check_for_menu_button_interaction);
     }
 }
 

@@ -9,6 +9,7 @@ pub struct UiAssets {
     pub arrow_left: Handle<Image>,
     pub arrow_right: Handle<Image>,
     pub arrow_up: Handle<Image>,
+    pub menu: Handle<Image>,
 }
 
 impl UiAssets {
@@ -20,6 +21,7 @@ impl UiAssets {
                 "../../assets/ui/arrow_right.png"
             ))),
             arrow_up: images.add(load_asset(include_bytes!("../../assets/ui/arrow_up.png"))),
+            menu: images.add(load_asset(include_bytes!("../../assets/ui/menu.png"))),
         }
     }
 }

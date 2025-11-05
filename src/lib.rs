@@ -44,8 +44,8 @@ use crate::{
         AnimationTimer, MovementTimer, PlayerMovementTimer, TemporaryTimer, TransporterTimer,
     },
     ui::{
-        ControlArrow, Fonts, PinchState, UiPlugin, UiState, check_for_controls_visibility,
-        check_for_game_over, menu::*,
+        ControlArrow, Fonts, PinchState, UiPlugin, UiState, check_for_game_over,
+        check_for_overlay_visibility, is_in_overlay, menu::*,
     },
     utils::get_level_path,
 };
@@ -190,7 +190,7 @@ pub fn main() {
             Update,
             (
                 animate_objects,
-                check_for_controls_visibility,
+                check_for_overlay_visibility,
                 check_for_deadly,
                 check_for_entrance,
                 check_for_exit,
@@ -320,8 +320,7 @@ pub fn on_mouse_input(
         return Ok(());
     };
 
-    if ui_state.drag_start.is_none() && cursor_position.y >= window.height() - 0.25 * window.width()
-    {
+    if ui_state.drag_start.is_none() && is_in_overlay(cursor_position, window) {
         return Ok(());
     }
 
@@ -374,7 +373,7 @@ pub fn on_touch_input(
         && ui_state.pinch_state.is_none()
         && !window_query
             .single()
-            .is_ok_and(|window| first.position().y < window.height() - 0.25 * window.width())
+            .is_ok_and(|window| !is_in_overlay(first.position(), window))
     {
         return;
     }
