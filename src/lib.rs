@@ -866,7 +866,10 @@ fn load_relative_level(
     game_state: Res<GameState>,
 ) {
     let LoadRelativeLevel(delta) = trigger.event();
-    let new_level = game_state.current_level.saturating_add_signed(*delta);
+    let new_level = game_state
+        .current_level
+        .saturating_add_signed(*delta)
+        .min(100);
     commands.trigger(LoadLevel(new_level));
 }
 
