@@ -31,7 +31,14 @@ contribution in any way they see fit. This includes, but is not limited to,
 distribution under the terms of the [General Public License v3](#license) as
 well as in binary form for release to app stores.
 
+# Build Instructions
+
+## Desktop
+
+0. Make sure you have the [Rust toolchain installed](https://rustup.rs/).
+1. Use `cargo run` to run the game.
+
 # License
 
-Chunky's Challenge is copyright 2024 by Couch Chilis and available under the
+Chunky's Challenge is copyright 2024-2026 by Couch Chilis and available under the
 [General Public License v3](LICENSE).
