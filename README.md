@@ -2,6 +2,8 @@
 
 > Clever 2D Puzzle Game with Chunky Graphics
 
+**This project has moved to https://codeberg.org/CouchChilis/**
+
 Chunky is not your average hero. They are square, quirkily drawn, and they have
 an unquenchable thirst for solving puzzles.
 
